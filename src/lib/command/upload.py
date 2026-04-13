@@ -1,3 +1,8 @@
+from cli.upload import UploadCLI
+from params.upload import UploadParams
+
+
 class UploadCommand:
     def execute(left):
-        pass
+        args = UploadCLI().args()
+        params = UploadParams(args)

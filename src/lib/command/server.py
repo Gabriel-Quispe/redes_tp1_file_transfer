@@ -1,3 +1,8 @@
+from cli.server import ServerCLI
+from params.server import ServerParams
+
+
 class ServerCommand:
     def execute(left):
-        pass
+        args = ServerCLI().args()
+        params = ServerParams(args)
