@@ -3,6 +3,7 @@ import os
 class FolderValidation:
     @staticmethod
     def validate(path):
+        path = os.path.expanduser(path)
         if os.path.exists(path) and not os.path.isdir(path):
             raise ValueError("Path exists but is not a directory")
         parent = os.path.dirname(os.path.abspath(path))
