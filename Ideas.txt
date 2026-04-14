@@ -1,0 +1,21 @@
+Tareas para hacer
+
+- Modelo del cliente
+- Controlador del cliente
+- Modelo del servidor
+- Controlador del servidor
+- Configuración Mininet
+
+
+
+Ideas y dudas sobre implementación
+
+- Hace falta una clase Segmento aparte que la utilicen de ambos lados?
+
+
+Supuestos
+
+-Constantes arbitrarias como los TIME_OUTs, tamaños de buffer, etc. 
+
+
+
