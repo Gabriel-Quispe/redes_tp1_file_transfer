@@ -1,7 +1,7 @@
 import socket
 import struct
 
-from app.rdt import RDTProtocol
+from app.rdt.rdt import RDTProtocol
 
 # ---------------------------------------------------------------------------
 # Constantes internas de S&W

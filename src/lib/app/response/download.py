@@ -1,7 +1,7 @@
 from app.codigos.cod_error import CodError
 from app.codigos.cod_msj import CodMsj
 from app.msj_serializer import MessageSerializer
-from app.rdt import RDTProtocol
+from app.rdt.rdt import RDTProtocol
 
 
 class ResponseDownload:
