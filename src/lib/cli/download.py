@@ -25,6 +25,6 @@ class DownloadCLI(BaseCLI):
             "--protocol",
             metavar="",
             required=True,
-            choices=["stop_and_wait", "go_back_n", "selective_repeat"],
+            choices=["stop_and_wait", "selective_repeat"],
             help="error recovery protocol",
         )
