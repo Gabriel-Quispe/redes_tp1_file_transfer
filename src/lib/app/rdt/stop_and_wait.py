@@ -1,3 +1,4 @@
+import queue
 import socket
 import struct
 
@@ -82,15 +83,28 @@ class StopAndWait(RDTProtocol):
 
     La capa de aplicación solo llama a enviar_mensaje() y recibir_mensaje().
     No sabe nada de SEQ, ACK, timeouts ni retransmisiones.
+
+    Modo cliente (inbox=None): lee directo del socket con recvfrom.
+    Modo servidor (inbox=Queue): lee de la cola que llena el dispatcher,
+    evitando competir con el ServerListener por el socket compartido.
     """
 
-    def __init__(self, sock: socket.socket, addr: tuple[str, int]) -> None:
+    def __init__(
+        self,
+        sock: socket.socket,
+        addr: tuple[str, int],
+        inbox: queue.Queue = None,
+    ) -> None:
         self._sock = sock
         self._addr = addr
+        self._inbox = inbox
         self._seq_tx = 0  # número de secuencia del próximo envío
         self._seq_rx = 0  # número de secuencia que espero recibir
 
-        self._sock.settimeout(TIMEOUT)
+        # El timeout solo tiene sentido cuando leemos del socket directamente.
+        # En modo servidor el blocking lo maneja la Queue.
+        if self._inbox is None:
+            self._sock.settimeout(TIMEOUT)
 
     # ------------------------------------------------------------------
     # Interfaz pública (lo único que ve la capa de aplicación)
@@ -110,7 +124,6 @@ class StopAndWait(RDTProtocol):
 
             ack_recibido = self._esperar_ack(self._seq_tx)
             if ack_recibido:
-                # ACK correcto: avanzar número de secuencia
                 self._seq_tx = 1 - self._seq_tx
                 return
 
@@ -131,13 +144,26 @@ class StopAndWait(RDTProtocol):
             if payload is None:
                 continue
 
-            # Segmento válido y en orden: avanzar y retornar a la app
             self._seq_rx = 1 - self._seq_rx
             return payload
 
     # ------------------------------------------------------------------
     # Lógica interna
     # ------------------------------------------------------------------
+
+    def _recibir_raw(self) -> tuple[bytes, tuple]:
+        """
+        Abstrae la fuente de datos:
+        - Modo cliente: recvfrom directo del socket (con timeout).
+        - Modo servidor: get() de la cola del dispatcher (bloqueante).
+        Lanza TimeoutError en modo servidor si la cola tarda más de TIMEOUT.
+        """
+        if self._inbox is not None:
+            try:
+                return self._inbox.get(timeout=TIMEOUT)
+            except queue.Empty as err:
+                raise TimeoutError from err
+        return self._sock.recvfrom(BUFFER_SIZE)
 
     def _esperar_ack(self, seq_esperado: int) -> bool:
         """
@@ -146,7 +172,7 @@ class StopAndWait(RDTProtocol):
         Retorna False si hay timeout.
         """
         try:
-            data, _ = self._sock.recvfrom(BUFFER_SIZE)
+            data, _ = self._recibir_raw()
         except TimeoutError:
             return False
 
@@ -165,7 +191,7 @@ class StopAndWait(RDTProtocol):
         - Si llega corrupto: descarta silenciosamente, retorna None.
         """
         try:
-            data, addr = self._sock.recvfrom(BUFFER_SIZE)
+            data, addr = self._recibir_raw()
         except TimeoutError:
             return None
 
@@ -176,7 +202,6 @@ class StopAndWait(RDTProtocol):
         seq, _, payload = resultado
 
         if seq == seq_esperado:
-            # Segmento nuevo y en orden: confirmar y entregar
             ack = _build_segment(0, seq_esperado, b"")
             self._sock.sendto(ack, addr)
             return payload
