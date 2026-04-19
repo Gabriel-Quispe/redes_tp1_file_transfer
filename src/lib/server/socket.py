@@ -14,3 +14,6 @@ class ServerSocket:
 
     def send(self, data, addr):
         self.sock.sendto(data, addr)
+
+    def sendto(self, data, addr):
+        self.sock.sendto(data, addr)
