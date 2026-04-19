@@ -11,11 +11,14 @@ class ClientDispatcher:
         self.registry = ClientRegistry()
 
     def dispatch(self, data, addr):
-        if self.registry.is_new(addr):
-            handler = ClientHandler(self.sock, addr, self.storage)
-            self.registry.register(addr, handler)
+        handler, is_new = self.registry.register_if_new(
+            addr,
+            lambda: ClientHandler(self.sock, addr, self.storage),
+        )
+
+        if is_new:
             thread = threading.Thread(target=handler.handle, args=(data,))
             thread.daemon = True
             thread.start()
         else:
-            self.registry.get(addr).receive(data)
+            handler.receive(data)

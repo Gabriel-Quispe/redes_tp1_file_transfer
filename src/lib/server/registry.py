@@ -6,13 +6,19 @@ class ClientRegistry:
         self.clients = {}
         self.lock = threading.Lock()
 
-    def is_new(self, addr):
+    def register_if_new(self, addr, handler_factory):
+        """
+        Si addr no está registrado, llama a handler_factory() para crear
+        el handler, lo registra y retorna (handler, True).
+        Si ya existe, retorna (handler_existente, False).
+        Todo bajo el mismo lock, sin race condition.
+        """
         with self.lock:
-            return addr not in self.clients
-
-    def register(self, addr, handler):
-        with self.lock:
-            self.clients[addr] = handler
+            if addr not in self.clients:
+                handler = handler_factory()
+                self.clients[addr] = handler
+                return handler, True
+            return self.clients[addr], False
 
     def get(self, addr):
         with self.lock:
