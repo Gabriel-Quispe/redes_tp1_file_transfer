@@ -2,9 +2,9 @@ import threading
 
 from cli.server import ServerCLI
 from params.server import ServerParams
-from server.socket import ServerSocket
 from server.dispatcher import ClientDispatcher
 from server.listener import ServerListener
+from server.socket import ServerSocket
 
 
 class ServerCommand:

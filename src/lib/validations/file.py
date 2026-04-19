@@ -1,5 +1,6 @@
 import os
 
+
 class FileValidation:
     @staticmethod
     def validate(path):

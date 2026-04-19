@@ -1,4 +1,5 @@
 import ipaddress
+import re
 
 
 class HostValidation:
@@ -6,6 +7,6 @@ class HostValidation:
     def validate(host):
         try:
             ipaddress.ip_address(host)
-        except ValueError:
-            if not re.match(r'^[a-zA-Z0-9.-]+$', host):
-                raise ValueError("Invalid host")
+        except ValueError as err:
+            if not re.match(r"^[a-zA-Z0-9.-]+$", host):
+                raise ValueError("Invalid host") from err

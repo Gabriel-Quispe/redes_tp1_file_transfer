@@ -1,7 +1,7 @@
 import threading
 
-from server.registry import ClientRegistry
 from server.handler import ClientHandler
+from server.registry import ClientRegistry
 
 
 class ClientDispatcher:

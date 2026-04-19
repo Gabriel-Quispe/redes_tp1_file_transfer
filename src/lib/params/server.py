@@ -1,8 +1,4 @@
-from validations import (
-    HostValidation,
-    FolderValidation,
-    PortValidation
-)
+from validations import FolderValidation, HostValidation, PortValidation
 
 
 class ServerParams:

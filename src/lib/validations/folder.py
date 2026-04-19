@@ -1,5 +1,6 @@
 import os
 
+
 class FolderValidation:
     @staticmethod
     def validate(path):

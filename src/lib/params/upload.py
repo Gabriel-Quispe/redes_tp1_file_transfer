@@ -1,8 +1,8 @@
 from validations import (
-    HostValidation,
     FileValidation,
-    PortValidation,
+    HostValidation,
     NameValidation,
+    PortValidation,
     ProtocolValidation,
 )
 

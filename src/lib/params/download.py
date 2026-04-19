@@ -1,9 +1,9 @@
 from validations import (
-    HostValidation,
     FolderValidation,
+    HostValidation,
     NameValidation,
     PortValidation,
-    ProtocolValidation
+    ProtocolValidation,
 )
 
 
