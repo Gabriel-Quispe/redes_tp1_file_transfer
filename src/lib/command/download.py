@@ -2,8 +2,8 @@ import os
 import socket
 
 from app.msj_serializer import MessageSerializer
-from app.request.download import RequestDownload
 from app.rdt.stop_and_wait import StopAndWait
+from app.request.download import RequestDownload
 from cli.download import DownloadCLI
 from params.download import DownloadParams
 

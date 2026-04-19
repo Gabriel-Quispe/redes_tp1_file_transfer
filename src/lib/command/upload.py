@@ -1,8 +1,8 @@
 import socket
 
 from app.msj_serializer import MessageSerializer
-from app.request.upload import RequestUpload
 from app.rdt.stop_and_wait import StopAndWait
+from app.request.upload import RequestUpload
 from cli.upload import UploadCLI
 from params.upload import UploadParams
 
