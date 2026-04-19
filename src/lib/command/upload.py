@@ -7,6 +7,14 @@ from cli.upload import UploadCLI
 from params.upload import UploadParams
 
 
+def _build_rdt(protocol: str, sock, addr):
+    if protocol == "stop_and_wait":
+        return StopAndWait(sock, addr)
+    if protocol == "selective_repeat":
+        raise NotImplementedError("Selective Repeat aún no implementado")
+    raise ValueError(f"Protocolo desconocido: {protocol}")
+
+
 class UploadCommand:
     def execute(self):
         args = UploadCLI().args()
@@ -15,7 +23,7 @@ class UploadCommand:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(("0.0.0.0", 0))
 
-        rdt = StopAndWait(sock, (params.host, params.port))
+        rdt = _build_rdt(params.protocol, sock, (params.host, params.port))
         serializer = MessageSerializer()
 
         RequestUpload(rdt, serializer, params.src).ejecutar()

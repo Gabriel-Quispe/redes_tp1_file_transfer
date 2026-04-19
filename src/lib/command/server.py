@@ -1,28 +1,31 @@
-import threading
+import os
+import socket
 
-from cli.server import ServerCLI
-from params.server import ServerParams
-from server.dispatcher import ClientDispatcher
-from server.listener import ServerListener
-from server.socket import ServerSocket
+from app.msj_serializer import MessageSerializer
+from app.rdt.stop_and_wait import StopAndWait
+from app.request.download import RequestDownload
+from cli.download import DownloadCLI
+from params.download import DownloadParams
 
 
-class ServerCommand:
+def _build_rdt(protocol: str, sock, addr):
+    if protocol == "stop_and_wait":
+        return StopAndWait(sock, addr)
+    if protocol == "selective_repeat":
+        raise NotImplementedError("Selective Repeat aún no implementado")
+    raise ValueError(f"Protocolo desconocido: {protocol}")
+
+
+class DownloadCommand:
     def execute(self):
-        args = ServerCLI().args()
-        params = ServerParams(args)
+        args = DownloadCLI().args()
+        params = DownloadParams(args)
 
-        server_socket = ServerSocket(params.host, params.port)
-        dispatcher = ClientDispatcher(server_socket, params.storage)
-        listener = ServerListener(server_socket, dispatcher)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(("0.0.0.0", 0))
 
-        thread = threading.Thread(target=listener.start)
-        thread.daemon = True
-        thread.start()
+        dest_path = os.path.join(params.dst, params.name)
+        rdt = _build_rdt(params.protocol, sock, (params.host, params.port))
+        serializer = MessageSerializer()
 
-        while input() != "exit":
-            pass
-
-        print("Shutting down server...")
-        listener.stop()
-        server_socket.close()
+        RequestDownload(rdt, serializer, params.name, dest_path).ejecutar()
