@@ -1,9 +1,14 @@
-[tool.ruff]
-line-length = 100
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src/lib"]
 
-[tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "C4", "ARG", "PL"]
-extend-select = ["PLR2004"]
+[project]
+name = "redes-tp1"
+version = "0.1.0"
+requires-python = ">=3.10"
 
-[tool.ruff.format]
-quote-style = "double"
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-bdd",
+]
