@@ -26,8 +26,12 @@ class BaseCLI(ABC):
 
     def _add_common_arguments(self):
         group = self.parser.add_mutually_exclusive_group()
-        group.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity")
-        group.add_argument("-q", "--quiet", action="store_true", help="decrease output verbosity")
+        group.add_argument(
+            "-v", "--verbose", action="store_true", help="increase output verbosity"
+        )
+        group.add_argument(
+            "-q", "--quiet", action="store_true", help="decrease output verbosity"
+        )
 
     def _formatter(self, prog):
         return argparse.HelpFormatter(prog, width=100, max_help_position=40)

@@ -1,4 +1,5 @@
 import socket
+import sys
 
 from app.msj_serializer import MessageSerializer
 from app.rdt.stop_and_wait import StopAndWait
@@ -17,13 +18,18 @@ def _build_rdt(protocol: str, sock, addr):
 
 class UploadCommand:
     def execute(self):
-        args = UploadCLI().args()
-        params = UploadParams(args)
+        try:
+            args = UploadCLI().args()
+            params = UploadParams(args)
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(("0.0.0.0", 0))
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.bind(("0.0.0.0", 0))
 
-        rdt = _build_rdt(params.protocol, sock, (params.host, params.port))
-        serializer = MessageSerializer()
+            rdt = _build_rdt(params.protocol, sock, (params.host, params.port))
+            serializer = MessageSerializer()
 
-        RequestUpload(rdt, serializer, params.src).ejecutar()
+            RequestUpload(rdt, serializer, params.src, params.name).ejecutar()
+
+        except (ValueError, FileNotFoundError, RuntimeError, NotImplementedError) as e:
+            print(str(e), file=sys.stderr)
+            sys.exit(1)

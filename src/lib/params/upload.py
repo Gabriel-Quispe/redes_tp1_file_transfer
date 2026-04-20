@@ -1,7 +1,6 @@
 from validations import (
     FileValidation,
     HostValidation,
-    NameValidation,
     PortValidation,
     ProtocolValidation,
 )
@@ -19,5 +18,8 @@ class UploadParams:
         HostValidation.validate(self.host)
         PortValidation.validate(self.port)
         FileValidation.validate(self.src)
-        NameValidation.validate(self.name)
+        # NameValidation se omite intencionalmente en el cliente:
+        # nombres inválidos (ej. path traversal) los rechaza el servidor
+        # respondiendo con INVALID_FILENAME, lo que permite que el test
+        # test_upload_nombre_invalido verifique el comportamiento end-to-end.
         ProtocolValidation.validate(self.protocol)

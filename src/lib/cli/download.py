@@ -19,7 +19,9 @@ class DownloadCLI(BaseCLI):
         self.parser.add_argument(
             "-d", "--dst", required=True, metavar="", help="destination file path"
         )
-        self.parser.add_argument("-n", "--name", required=True, metavar="", help="file name")
+        self.parser.add_argument(
+            "-n", "--name", required=True, metavar="", help="file name"
+        )
         self.parser.add_argument(
             "-r",
             "--protocol",

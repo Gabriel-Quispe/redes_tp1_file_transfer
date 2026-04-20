@@ -1,5 +1,6 @@
 import os
 import socket
+import sys
 
 from app.msj_serializer import MessageSerializer
 from app.rdt.stop_and_wait import StopAndWait
@@ -18,14 +19,20 @@ def _build_rdt(protocol: str, sock, addr):
 
 class DownloadCommand:
     def execute(self):
-        args = DownloadCLI().args()
-        params = DownloadParams(args)
+        try:
+            args = DownloadCLI().args()
+            params = DownloadParams(args)
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(("0.0.0.0", 0))
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.bind(("0.0.0.0", 0))
 
-        dest_path = os.path.join(params.dst, params.name)
-        rdt = _build_rdt(params.protocol, sock, (params.host, params.port))
-        serializer = MessageSerializer()
+            rdt = _build_rdt(params.protocol, sock, (params.host, params.port))
+            serializer = MessageSerializer()
 
-        RequestDownload(rdt, serializer, params.name, dest_path).ejecutar()
+            dest_path = os.path.join(params.dst, params.name)
+            RequestDownload(rdt, serializer, params.name, dest_path).ejecutar()
+
+        except (ValueError, FileNotFoundError, RuntimeError, NotImplementedError,
+                PermissionError, OSError) as e:
+            print(str(e), file=sys.stderr)
+            sys.exit(1)

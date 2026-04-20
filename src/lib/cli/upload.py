@@ -16,8 +16,12 @@ class UploadCLI(BaseCLI):
         self.parser.add_argument(
             "-p", "--port", metavar="", type=int, default=8000, help="server port"
         )
-        self.parser.add_argument("-s", "--src", metavar="", required=True, help="source file path")
-        self.parser.add_argument("-n", "--name", metavar="", required=True, help="file name")
+        self.parser.add_argument(
+            "-s", "--src", metavar="", required=True, help="source file path"
+        )
+        self.parser.add_argument(
+            "-n", "--name", metavar="", required=True, help="file name"
+        )
         self.parser.add_argument(
             "-r",
             "--protocol",

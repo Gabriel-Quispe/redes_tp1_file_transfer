@@ -5,23 +5,8 @@ from app.rdt.rdt import RDTProtocol
 
 
 class RequestDownload:
-    """
-    Orquesta la operación DOWNLOAD desde el lado del cliente.
-
-    Flujo:
-        cliente → REQUEST { DOWNLOAD, filename }
-        cliente ← RESPONSE { OK, filesize }
-        cliente → RESPONSE { OK }
-        cliente ← DATA { <bytes crudos> }
-    """
-
-    def __init__(
-        self,
-        rdt: RDTProtocol,
-        serializer: MessageSerializer,
-        filename: str,
-        dest_path: str,
-    ) -> None:
+    def __init__(self, rdt: RDTProtocol, serializer: MessageSerializer,
+                 filename: str, dest_path: str) -> None:
         self._rdt = rdt
         self._serializer = serializer
         self._filename = filename
@@ -29,8 +14,9 @@ class RequestDownload:
 
     def ejecutar(self) -> None:
         # Paso 1: enviar REQUEST
-        request = self._serializer.build_request_download(self._filename)
-        self._rdt.enviar_mensaje(request)
+        self._rdt.enviar_mensaje(
+            self._serializer.build_request_download(self._filename)
+        )
 
         # Paso 2: recibir RESPONSE con filesize
         response = self._rdt.recibir_mensaje()
@@ -42,7 +28,7 @@ class RequestDownload:
 
         filesize = self._serializer.parse_response_filesize(response)
 
-        # Paso 3: validar espacio y confirmar
+        # Paso 3: confirmar al servidor
         error = self._validar_espacio(filesize)
         if error:
             self._rdt.enviar_mensaje(self._serializer.build_err(error))
@@ -50,13 +36,18 @@ class RequestDownload:
 
         self._rdt.enviar_mensaje(self._serializer.build_response_ok())
 
-        # Paso 4: recibir DATA y guardar
-        incoming = self._rdt.recibir_mensaje()
-        file_data = self._serializer.parse_file_data(incoming)
-        self._guardar_archivo(file_data)
+        # Paso 4: recibir DATA en chunks
+        chunks = []
+        while True:
+            incoming = self._rdt.recibir_mensaje()
+            chunk, more = self._serializer.parse_data_chunk(incoming)
+            chunks.append(chunk)
+            if not more:
+                break
+
+        self._guardar_archivo(b"".join(chunks))
 
     def _validar_espacio(self, _filesize: int) -> CodError | None:
-        # Aquí se puede verificar espacio disponible en disco
         return None
 
     def _guardar_archivo(self, data: bytes) -> None:
