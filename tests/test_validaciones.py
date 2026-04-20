@@ -1,6 +1,5 @@
 import os
 
-import pytest
 from pytest_bdd import given, when, then, scenario, parsers
 
 from validations.host import HostValidation
@@ -10,68 +9,106 @@ from validations.protocol import ProtocolValidation
 from validations.file import FileValidation
 from validations.folder import FolderValidation
 
-FEATURE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../features/validaciones.feature"))
+FEATURE = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../features/validaciones.feature")
+)
 
 
 @scenario(FEATURE, "Host válido como IP")
-def test_host_ip(): pass
+def test_host_ip():
+    pass
+
 
 @scenario(FEATURE, "Host válido como hostname")
-def test_host_hostname(): pass
+def test_host_hostname():
+    pass
+
 
 @scenario(FEATURE, "Host inválido")
-def test_host_invalido(): pass
+def test_host_invalido():
+    pass
+
 
 @scenario(FEATURE, "Puerto válido en el límite inferior")
-def test_puerto_min(): pass
+def test_puerto_min():
+    pass
+
 
 @scenario(FEATURE, "Puerto válido en el límite superior")
-def test_puerto_max(): pass
+def test_puerto_max():
+    pass
+
 
 @scenario(FEATURE, "Puerto fuera de rango inferior")
-def test_puerto_bajo(): pass
+def test_puerto_bajo():
+    pass
+
 
 @scenario(FEATURE, "Puerto fuera de rango superior")
-def test_puerto_alto(): pass
+def test_puerto_alto():
+    pass
+
 
 @scenario(FEATURE, "Nombre de archivo válido")
-def test_nombre_valido(): pass
+def test_nombre_valido():
+    pass
+
 
 @scenario(FEATURE, "Nombre de archivo vacío")
-def test_nombre_vacio(): pass
+def test_nombre_vacio():
+    pass
+
 
 @scenario(FEATURE, "Nombre de archivo con caracteres inválidos")
-def test_nombre_invalido(): pass
+def test_nombre_invalido():
+    pass
+
 
 @scenario(FEATURE, "Nombre de archivo con path traversal")
-def test_nombre_traversal(): pass
+def test_nombre_traversal():
+    pass
+
 
 @scenario(FEATURE, "Protocolo válido stop_and_wait")
-def test_protocolo_saw(): pass
+def test_protocolo_saw():
+    pass
+
 
 @scenario(FEATURE, "Protocolo válido selective_repeat")
-def test_protocolo_sr(): pass
+def test_protocolo_sr():
+    pass
+
 
 @scenario(FEATURE, "Protocolo inválido")
-def test_protocolo_invalido(): pass
+def test_protocolo_invalido():
+    pass
+
 
 @scenario(FEATURE, "Archivo de origen válido")
-def test_archivo_valido(): pass
+def test_archivo_valido():
+    pass
+
 
 @scenario(FEATURE, "Archivo de origen inexistente")
-def test_archivo_inexistente(): pass
+def test_archivo_inexistente():
+    pass
+
 
 @scenario(FEATURE, "Carpeta de destino válida")
-def test_carpeta_valida(): pass
+def test_carpeta_valida():
+    pass
+
 
 @scenario(FEATURE, "Carpeta de destino con padre inexistente")
-def test_carpeta_padre_inexistente(): pass
+def test_carpeta_padre_inexistente():
+    pass
 
 
 # ---------------------------------------------------------------------------
 # Givens
 # FIX: Feature uses "Dado que X" → step text is "que X", so prefix "que " here.
 # ---------------------------------------------------------------------------
+
 
 @given(parsers.parse('que existe un archivo "{path}" con contenido "{contenido}"'))
 def step_crear_archivo(ctx, path, contenido):
@@ -96,6 +133,7 @@ def step_crear_carpeta(ctx, path):
 # ---------------------------------------------------------------------------
 # Whens
 # ---------------------------------------------------------------------------
+
 
 @when(parsers.parse('valido el host "{host}"'))
 def step_validar_host(ctx, host):
@@ -156,6 +194,7 @@ def step_validar_carpeta(ctx, path):
 # ---------------------------------------------------------------------------
 # Thens
 # ---------------------------------------------------------------------------
+
 
 @then("la validación pasa sin error")
 def step_sin_error(ctx):

@@ -5,8 +5,9 @@ from app.rdt.rdt import RDTProtocol
 
 
 class ResponseDownload:
-    def __init__(self, rdt: RDTProtocol, serializer: MessageSerializer,
-                 storage_dir: str) -> None:
+    def __init__(
+        self, rdt: RDTProtocol, serializer: MessageSerializer, storage_dir: str
+    ) -> None:
         self._rdt = rdt
         self._serializer = serializer
         self._storage_dir = storage_dir
@@ -26,9 +27,7 @@ class ResponseDownload:
             return
 
         filesize = len(file_data)
-        self._rdt.enviar_mensaje(
-            self._serializer.build_response_ok_filesize(filesize)
-        )
+        self._rdt.enviar_mensaje(self._serializer.build_response_ok_filesize(filesize))
 
         # Paso 3: esperar confirmación del cliente
         confirm = self._rdt.recibir_mensaje()
@@ -37,9 +36,7 @@ class ResponseDownload:
 
         # Paso 4: enviar DATA en chunks
         for chunk, more in self._serializer.chunks(file_data):
-            self._rdt.enviar_mensaje(
-                self._serializer.build_data_chunk(chunk, more)
-            )
+            self._rdt.enviar_mensaje(self._serializer.build_data_chunk(chunk, more))
 
     def _leer_archivo(self, filepath: str) -> bytes | None:
         try:

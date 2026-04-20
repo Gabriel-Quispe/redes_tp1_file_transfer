@@ -1,6 +1,5 @@
 import os
 import shutil
-import socket
 import threading
 import time
 
@@ -52,11 +51,11 @@ def servidor_corriendo(request):
     thread = threading.Thread(target=listener.start)
     thread.daemon = True
     thread.start()
-    time.sleep(0.15)          # dar tiempo al thread para que el bind esté listo
+    time.sleep(0.15)  # dar tiempo al thread para que el bind esté listo
     yield {"host": host, "port": port, "storage": storage}
     listener.stop()
     server_socket.close()
-    time.sleep(0.05)          # pequeña pausa para que el SO libere el puerto
+    time.sleep(0.05)  # pequeña pausa para que el SO libere el puerto
 
 
 @pytest.fixture

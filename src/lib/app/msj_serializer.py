@@ -1,5 +1,3 @@
-import struct
-
 from app.codigos.cod_error import CodError
 from app.codigos.cod_msj import CodMsj
 from app.codigos.cod_op import CodOp
@@ -19,7 +17,7 @@ class MessageSerializer:
     """
 
     MAX_FILENAME_LENGTH = 255
-    MAX_CHUNK_BYTES = 32768   # 32 KB por chunk — bien por debajo del límite UDP
+    MAX_CHUNK_BYTES = 32768  # 32 KB por chunk — bien por debajo del límite UDP
 
     # ------------------------------------------------------------------
     # Builders
@@ -39,7 +37,9 @@ class MessageSerializer:
         return bytes([CodMsj.RESPONSE, CodState.OK])
 
     def build_response_ok_filesize(self, filesize: int) -> bytes:
-        return bytes([CodMsj.RESPONSE, CodState.OK]) + filesize.to_bytes(4, byteorder="big")
+        return bytes([CodMsj.RESPONSE, CodState.OK]) + filesize.to_bytes(
+            4, byteorder="big"
+        )
 
     def build_data_chunk(self, chunk: bytes, more: bool) -> bytes:
         """Un chunk de datos con flag MORE."""
@@ -93,7 +93,9 @@ class MessageSerializer:
     def chunks(self, file_data: bytes) -> list[tuple[bytes, bool]]:
         """Divide file_data en (chunk, more) listos para enviar."""
         size = self.MAX_CHUNK_BYTES
-        parts = [file_data[i:i+size] for i in range(0, max(len(file_data), 1), size)]
+        parts = [
+            file_data[i : i + size] for i in range(0, max(len(file_data), 1), size)
+        ]
         return [(part, i < len(parts) - 1) for i, part in enumerate(parts)]
 
     # ------------------------------------------------------------------
@@ -109,5 +111,5 @@ class MessageSerializer:
 
     def _decode_filename(self, data: bytes, offset: int) -> tuple[str, int]:
         length = data[offset]
-        name = data[offset + 1: offset + 1 + length].decode("utf-8")
+        name = data[offset + 1 : offset + 1 + length].decode("utf-8")
         return name, offset + 1 + length

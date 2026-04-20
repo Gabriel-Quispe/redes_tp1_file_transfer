@@ -5,8 +5,13 @@ from app.rdt.rdt import RDTProtocol
 
 
 class RequestDownload:
-    def __init__(self, rdt: RDTProtocol, serializer: MessageSerializer,
-                 filename: str, dest_path: str) -> None:
+    def __init__(
+        self,
+        rdt: RDTProtocol,
+        serializer: MessageSerializer,
+        filename: str,
+        dest_path: str,
+    ) -> None:
         self._rdt = rdt
         self._serializer = serializer
         self._filename = filename

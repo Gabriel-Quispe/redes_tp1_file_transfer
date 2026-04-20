@@ -5,8 +5,9 @@ from app.rdt.rdt import RDTProtocol
 
 
 class ResponseUpload:
-    def __init__(self, rdt: RDTProtocol, serializer: MessageSerializer,
-                 storage_dir: str) -> None:
+    def __init__(
+        self, rdt: RDTProtocol, serializer: MessageSerializer, storage_dir: str
+    ) -> None:
         self._rdt = rdt
         self._serializer = serializer
         self._storage_dir = storage_dir
@@ -57,8 +58,9 @@ class ResponseUpload:
             return CodError.INVALID_FILENAME
         return None
 
-    def _escribir_archivo(self, path: str, data: bytes,
-                          expected_size: int) -> CodError | None:
+    def _escribir_archivo(
+        self, path: str, data: bytes, expected_size: int
+    ) -> CodError | None:
         if len(data) != expected_size:
             return CodError.FILESIZE_MISMATCH
         try:

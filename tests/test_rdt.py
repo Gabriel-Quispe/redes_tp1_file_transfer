@@ -3,34 +3,48 @@ import queue
 import socket
 import threading
 
-import pytest
 from pytest_bdd import given, when, then, scenario, parsers
 
-from app.rdt.stop_and_wait import StopAndWait, _build_segment, _parse_segment, HEADER_SIZE
+from app.rdt.stop_and_wait import StopAndWait, _build_segment, _parse_segment
 
-FEATURE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../features/rdt_stop_and_wait.feature"))
+FEATURE = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../features/rdt_stop_and_wait.feature")
+)
 
 
 @scenario(FEATURE, "Retransmisión ante timeout por pérdida de paquete de datos")
-def test_retransmision_perdida_datos(): pass
+def test_retransmision_perdida_datos():
+    pass
+
 
 @scenario(FEATURE, "Retransmisión ante timeout por pérdida de ACK")
-def test_retransmision_perdida_ack(): pass
+def test_retransmision_perdida_ack():
+    pass
+
 
 @scenario(FEATURE, "Descarte de segmento corrupto en el receptor")
-def test_descarte_corrupto(): pass
+def test_descarte_corrupto():
+    pass
+
 
 @scenario(FEATURE, "Descarte de segmento duplicado en el receptor")
-def test_descarte_duplicado(): pass
+def test_descarte_duplicado():
+    pass
+
 
 @scenario(FEATURE, "Falla definitiva tras MAX_REINTENTOS sin ACK")
-def test_falla_max_reintentos(): pass
+def test_falla_max_reintentos():
+    pass
+
 
 @scenario(FEATURE, "Alternancia correcta del número de secuencia")
-def test_alternancia_seq(): pass
+def test_alternancia_seq():
+    pass
+
 
 @scenario(FEATURE, "El servidor lee de la cola en vez del socket compartido")
-def test_servidor_lee_cola(): pass
+def test_servidor_lee_cola():
+    pass
 
 
 def _par_sockets():
@@ -45,10 +59,17 @@ def _par_sockets():
 # Givens
 # ---------------------------------------------------------------------------
 
-@given(parsers.parse("que el cliente tiene un StopAndWait configurado con timeout de {t:f} segundos"))
+
+@given(
+    parsers.parse(
+        "que el cliente tiene un StopAndWait configurado con timeout de {t:f} segundos"
+    )
+)
 def step_cliente_saw(ctx, t):
     s1, addr1, s2, addr2 = _par_sockets()
-    ctx.update({"s_emisor": s1, "addr_emisor": addr1, "s_receptor": s2, "addr_receptor": addr2})
+    ctx.update(
+        {"s_emisor": s1, "addr_emisor": addr1, "s_receptor": s2, "addr_receptor": addr2}
+    )
     ctx["saw"] = StopAndWait(s1, addr2)
 
 
@@ -106,38 +127,56 @@ def step_receptor_mudo(ctx):
     pass
 
 
-@given(parsers.parse("que el receptor tiene un StopAndWait esperando el segmento con seq {seq:d}"))
+@given(
+    parsers.parse(
+        "que el receptor tiene un StopAndWait esperando el segmento con seq {seq:d}"
+    )
+)
 def step_receptor_saw(ctx, seq):
     s1, addr1, s2, addr2 = _par_sockets()
     inbox = queue.Queue()
-    ctx.update({
-        "s_emisor": s1, "addr_emisor": addr1,
-        "s_receptor": s2, "addr_receptor": addr2,
-        "inbox": inbox,
-        "seq_esperado": seq,
-        "saw_receptor": StopAndWait(s2, addr1, inbox=inbox),
-    })
+    ctx.update(
+        {
+            "s_emisor": s1,
+            "addr_emisor": addr1,
+            "s_receptor": s2,
+            "addr_receptor": addr2,
+            "inbox": inbox,
+            "seq_esperado": seq,
+            "saw_receptor": StopAndWait(s2, addr1, inbox=inbox),
+        }
+    )
 
 
-@given(parsers.parse("que el receptor tiene un StopAndWait que ya recibió el segmento con seq {seq:d}"))
+@given(
+    parsers.parse(
+        "que el receptor tiene un StopAndWait que ya recibió el segmento con seq {seq:d}"
+    )
+)
 def step_receptor_ya_recibio(ctx, seq):
     s1, addr1, s2, addr2 = _par_sockets()
     inbox = queue.Queue()
     saw = StopAndWait(s2, addr1, inbox=inbox)
     saw._seq_rx = 1 - seq
-    ctx.update({
-        "s_emisor": s1, "addr_emisor": addr1,
-        "s_receptor": s2, "addr_receptor": addr2,
-        "inbox": inbox,
-        "saw_receptor": saw,
-        "seq_ya_recibido": seq,
-    })
+    ctx.update(
+        {
+            "s_emisor": s1,
+            "addr_emisor": addr1,
+            "s_receptor": s2,
+            "addr_receptor": addr2,
+            "inbox": inbox,
+            "saw_receptor": saw,
+            "seq_ya_recibido": seq,
+        }
+    )
 
 
 @given(parsers.parse("que el cliente tiene un StopAndWait con seq_tx inicial {seq:d}"))
 def step_cliente_saw_seq(ctx, seq):
     s1, addr1, s2, addr2 = _par_sockets()
-    ctx.update({"s_emisor": s1, "addr_emisor": addr1, "s_receptor": s2, "addr_receptor": addr2})
+    ctx.update(
+        {"s_emisor": s1, "addr_emisor": addr1, "s_receptor": s2, "addr_receptor": addr2}
+    )
     ctx["saw"] = StopAndWait(s1, addr2)
     assert ctx["saw"]._seq_tx == seq
 
@@ -146,16 +185,19 @@ def step_cliente_saw_seq(ctx, seq):
 def step_servidor_con_queue(ctx):
     s1, addr1, _, _ = _par_sockets()
     inbox = queue.Queue()
-    ctx.update({
-        "s_servidor": s1,
-        "inbox": inbox,
-        "saw_servidor": StopAndWait(s1, ("127.0.0.1", 9999), inbox=inbox),
-    })
+    ctx.update(
+        {
+            "s_servidor": s1,
+            "inbox": inbox,
+            "saw_servidor": StopAndWait(s1, ("127.0.0.1", 9999), inbox=inbox),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
 # Whens
 # ---------------------------------------------------------------------------
+
 
 @when(parsers.parse('el cliente llama a enviar_mensaje con datos "{datos}"'))
 def step_enviar_mensaje(ctx, datos):
@@ -217,6 +259,7 @@ def step_deposita_en_queue(ctx):
 # ---------------------------------------------------------------------------
 # Thens
 # ---------------------------------------------------------------------------
+
 
 @then("el cliente retransmite el segmento automáticamente")
 def step_retransmite(ctx):

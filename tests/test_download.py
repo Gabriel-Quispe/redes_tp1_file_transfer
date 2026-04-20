@@ -3,45 +3,67 @@ import subprocess
 import sys
 import time
 
-import pytest
 from pytest_bdd import given, when, then, scenario, parsers
 
-from conftest import STORAGE, DESTINO, HOST, PORT, crear_archivo_texto, crear_archivo_binario, poner_archivo_en_storage
+from conftest import STORAGE, poner_archivo_en_storage
 
 SRC = sys.executable
-DOWNLOAD_CMD = os.path.abspath(os.path.join(os.path.dirname(__file__), "../src/download"))
-FEATURE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../features/download.feature"))
+DOWNLOAD_CMD = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../src/download")
+)
+FEATURE = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../features/download.feature")
+)
 
 
 @scenario(FEATURE, "Descarga exitosa de un archivo de texto")
-def test_download_texto(): pass
+def test_download_texto():
+    pass
+
 
 @scenario(FEATURE, "Descarga exitosa de un archivo binario")
-def test_download_binario(): pass
+def test_download_binario():
+    pass
+
 
 @scenario(FEATURE, "Descarga exitosa de un archivo de 5 MB en menos de 2 minutos")
-def test_download_grande(): pass
+def test_download_grande():
+    pass
+
 
 @scenario(FEATURE, "Error al descargar un archivo que no existe en el servidor")
-def test_download_inexistente(): pass
+def test_download_inexistente():
+    pass
+
 
 @scenario(FEATURE, "Error al descargar con carpeta destino sin permisos de escritura")
-def test_download_sin_permisos(): pass
+def test_download_sin_permisos():
+    pass
+
 
 @scenario(FEATURE, "Error al descargar con puerto inválido")
-def test_download_puerto_invalido(): pass
+def test_download_puerto_invalido():
+    pass
+
 
 @scenario(FEATURE, "Error al descargar con protocolo inválido")
-def test_download_protocolo_invalido(): pass
+def test_download_protocolo_invalido():
+    pass
+
 
 @scenario(FEATURE, "Descarga con pérdida del 10% de paquetes")
-def test_download_con_perdida(): pass
+def test_download_con_perdida():
+    pass
+
 
 @scenario(FEATURE, "Descarga con paquetes corruptos")
-def test_download_con_corrupcion(): pass
+def test_download_con_corrupcion():
+    pass
+
 
 @scenario(FEATURE, "Error cuando el servidor no está disponible")
-def test_download_sin_servidor(): pass
+def test_download_sin_servidor():
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -49,12 +71,21 @@ def test_download_sin_servidor(): pass
 # FIX: "Dado que X" in Antecedentes/scenarios → step text "que X".
 # ---------------------------------------------------------------------------
 
-@given(parsers.parse('que el servidor está corriendo en "{host}" puerto {port:d} con storage "{storage}"'))
+
+@given(
+    parsers.parse(
+        'que el servidor está corriendo en "{host}" puerto {port:d} con storage "{storage}"'
+    )
+)
 def step_servidor_corriendo(servidor_corriendo):
     pass
 
 
-@given(parsers.parse('que el servidor tiene el archivo "{nombre}" con contenido "{contenido}"'))
+@given(
+    parsers.parse(
+        'que el servidor tiene el archivo "{nombre}" con contenido "{contenido}"'
+    )
+)
 def step_servidor_tiene_archivo(ctx, nombre, contenido):
     data = contenido.encode()
     poner_archivo_en_storage(nombre, data)
@@ -62,7 +93,9 @@ def step_servidor_tiene_archivo(ctx, nombre, contenido):
     ctx["contenido_original"] = data
 
 
-@given(parsers.parse('que el servidor tiene el archivo binario "{nombre}" de {size:d} MB'))
+@given(
+    parsers.parse('que el servidor tiene el archivo binario "{nombre}" de {size:d} MB')
+)
 def step_servidor_tiene_binario(ctx, nombre, size):
     data = os.urandom(size * 1024 * 1024)
     poner_archivo_en_storage(nombre, data)
@@ -86,7 +119,9 @@ def step_existe_carpeta(ctx, path):
 
 
 # FIX: feature says "Dado que la carpeta de destino ... no tiene permisos" → "que la carpeta..."
-@given(parsers.parse('que la carpeta de destino "{path}" no tiene permisos de escritura'))
+@given(
+    parsers.parse('que la carpeta de destino "{path}" no tiene permisos de escritura')
+)
 def step_carpeta_sin_permisos(ctx, path):
     os.makedirs(path, exist_ok=True)
     os.chmod(path, 0o444)
@@ -112,15 +147,32 @@ def step_sin_servidor():
 # Whens
 # ---------------------------------------------------------------------------
 
-@when(parsers.parse(
-    'ejecuto download con host "{host}" puerto {port:d} dst "{dst}" nombre "{nombre}" protocolo "{protocolo}"'
-))
+
+@when(
+    parsers.parse(
+        'ejecuto download con host "{host}" puerto {port:d} dst "{dst}" nombre "{nombre}" protocolo "{protocolo}"'
+    )
+)
 def step_ejecuto_download(ctx, host, port, dst, nombre, protocolo):
     dest = ctx.get("dst", dst)
     start = time.time()
     result = subprocess.run(
-        [SRC, DOWNLOAD_CMD, "-H", host, "-p", str(port), "-d", dest, "-n", nombre, "-r", protocolo],
-        capture_output=True, text=True
+        [
+            SRC,
+            DOWNLOAD_CMD,
+            "-H",
+            host,
+            "-p",
+            str(port),
+            "-d",
+            dest,
+            "-n",
+            nombre,
+            "-r",
+            protocolo,
+        ],
+        capture_output=True,
+        text=True,
     )
     ctx["result"] = result
     ctx["nombre"] = ctx.get("nombre", nombre)
@@ -131,6 +183,7 @@ def step_ejecuto_download(ctx, host, port, dst, nombre, protocolo):
 # ---------------------------------------------------------------------------
 # Thens
 # ---------------------------------------------------------------------------
+
 
 @then(parsers.parse('el archivo "{path}" existe'))
 def step_archivo_existe(path):

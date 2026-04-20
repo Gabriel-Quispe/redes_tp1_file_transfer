@@ -32,7 +32,13 @@ class DownloadCommand:
             dest_path = os.path.join(params.dst, params.name)
             RequestDownload(rdt, serializer, params.name, dest_path).ejecutar()
 
-        except (ValueError, FileNotFoundError, RuntimeError, NotImplementedError,
-                PermissionError, OSError) as e:
+        except (
+            ValueError,
+            FileNotFoundError,
+            RuntimeError,
+            NotImplementedError,
+            PermissionError,
+            OSError,
+        ) as e:
             print(str(e), file=sys.stderr)
             sys.exit(1)

@@ -1,3 +1,5 @@
+import socket
+
 from app.codigos.cod_error import CodError
 from app.codigos.cod_msj import CodMsj
 from app.msj_serializer import MessageSerializer
@@ -5,8 +7,13 @@ from app.rdt.rdt import RDTProtocol
 
 
 class RequestUpload:
-    def __init__(self, rdt: RDTProtocol, serializer: MessageSerializer,
-                 filepath: str, filename: str = None) -> None:
+    def __init__(
+        self,
+        rdt: RDTProtocol,
+        serializer: MessageSerializer,
+        filepath: str,
+        filename: str = None,
+    ) -> None:
         self._rdt = rdt
         self._serializer = serializer
         self._filepath = filepath
@@ -26,17 +33,13 @@ class RequestUpload:
 
         # Paso 3: enviar DATA en chunks
         for chunk, more in self._serializer.chunks(file_data):
-            self._rdt.enviar_mensaje(
-                self._serializer.build_data_chunk(chunk, more)
-            )
+            self._rdt.enviar_mensaje(self._serializer.build_data_chunk(chunk, more))
 
         # Paso 4: esperar confirmación final
         self._esperar_ok()
 
     def cancelar(self) -> None:
-        self._rdt.enviar_mensaje(
-            self._serializer.build_err(CodError.USER_CANCELLED)
-        )
+        self._rdt.enviar_mensaje(self._serializer.build_err(CodError.USER_CANCELLED))
 
     def _leer_archivo(self) -> bytes:
         try:
