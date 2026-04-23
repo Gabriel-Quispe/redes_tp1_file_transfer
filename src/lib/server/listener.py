@@ -1,15 +1,15 @@
 class ServerListener:
-    def __init__(self, server_socket, dispatcher):
-        self.server_socket = server_socket
-        self.dispatcher = dispatcher
+    def __init__(self, sk, dispath):
+        self.sk = sk
+        self.dispath = dispath
         self.running = False
 
     def start(self):
         self.running = True
         while self.running:
             try:
-                data, addr = self.server_socket.receive()
-                self.dispatcher.dispatch(data, addr)
+                data, addr = self.sk.receive()
+                self.dispath.dispatch(data, addr)
             except OSError:
                 break
 

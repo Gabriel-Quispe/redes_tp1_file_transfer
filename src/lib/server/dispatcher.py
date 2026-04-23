@@ -1,23 +1,22 @@
-import threading
-
+import threading as th
 from server.handler import ClientHandler
-from server.registry import ClientRegistry
 
 
 class ClientDispatcher:
-    def __init__(self, sock, storage):
+    def __init__(self, sock, store, reg):
         self.sock = sock
-        self.storage = storage
-        self.registry = ClientRegistry()
+        self.store = store
+        self.reg = reg
 
     def dispatch(self, data, addr):
-        handler, is_new = self.registry.register_if_new(
-            addr,
-            lambda: ClientHandler(self.sock, addr, self.storage),
-        )
+        handler, is_new = self.reg.register_if_new(addr,
+        lambda: ClientHandler(self.sock, addr, self.store))
 
         if is_new:
-            thread = threading.Thread(target=handler.handle, args=(data,))
+            thread = th.Thread(
+                target=handler.handle,
+                args=(data,)
+            )
             thread.daemon = True
             thread.start()
         else:

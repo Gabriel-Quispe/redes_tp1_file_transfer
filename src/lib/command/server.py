@@ -5,6 +5,8 @@ from params.server import ServerParams
 from server.dispatcher import ClientDispatcher
 from server.listener import ServerListener
 from server.socket import ServerSocket
+from server.registry import ClientRegistry
+
 
 
 class ServerCommand:
@@ -13,7 +15,8 @@ class ServerCommand:
         params = ServerParams(args)
 
         server_socket = ServerSocket(params.host, params.port)
-        dispatcher = ClientDispatcher(server_socket, params.storage)
+        registry = ClientRegistry()
+        dispatcher = ClientDispatcher(server_socket, params.storage, registry)
         listener = ServerListener(server_socket, dispatcher)
 
         thread = threading.Thread(target=listener.start)

@@ -9,12 +9,14 @@ from app.response.upload import ResponseUpload
 
 
 class ClientHandler:
-    def __init__(self, sock, addr, storage):
-        self.sock = sock
+    def __init__(self, sk, addr, store):
+        self.sk = sk
         self.addr = addr
-        self.storage = storage
+        self.store = store
+
+        # Dependencias extras...
         self._inbox = queue.Queue()
-        self._rdt = StopAndWait(sock, addr, inbox=self._inbox)
+        self._rdt = StopAndWait(sk, addr, inbox=self._inbox)
         self._serializer = MessageSerializer()
 
     def handle(self, data):
@@ -30,9 +32,9 @@ class ClientHandler:
             return
 
         if op == CodOp.UPLOAD:
-            ResponseUpload(self._rdt, self._serializer, self.storage).ejecutar()
+            ResponseUpload(self._rdt, self._serializer, self.store).ejecutar()
         elif op == CodOp.DOWNLOAD:
-            ResponseDownload(self._rdt, self._serializer, self.storage).ejecutar()
+            ResponseDownload(self._rdt, self._serializer, self.store).ejecutar()
 
     def receive(self, data):
         self._inbox.put((data, self.addr))

@@ -8,6 +8,8 @@ import pytest
 from server.dispatcher import ClientDispatcher
 from server.listener import ServerListener
 from server.socket import ServerSocket
+from server.registry import ClientRegistry
+
 
 # Valores alineados con los .feature files
 STORAGE = "/tmp/storage"
@@ -46,7 +48,8 @@ def servidor_corriendo(request):
     storage = STORAGE
 
     server_socket = ServerSocket(host, port)
-    dispatcher = ClientDispatcher(server_socket, storage)
+    registry = ClientRegistry()
+    dispatcher = ClientDispatcher(server_socket, storage, registry)
     listener = ServerListener(server_socket, dispatcher)
     thread = threading.Thread(target=listener.start)
     thread.daemon = True
