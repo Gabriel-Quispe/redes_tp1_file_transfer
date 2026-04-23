@@ -18,26 +18,16 @@ class ClientHandler:
         self._serializer = MessageSerializer()
 
     def handle(self, data):
-        """
-        Punto de entrada del hilo. Recibe el primer mensaje del cliente
-        y delega al transfer correspondiente (upload o download).
-        """
-        # Depositar el primer paquete en la cola para que el RDT lo consuma
         self._inbox.put((data, self.addr))
-
-        # Leer el mensaje a nivel aplicación para saber qué operación es
-        # Nota: usamos el serializer directo sobre `data` para no consumir
-        # el mensaje de la cola — el RDT lo leerá cuando ejecute()  lo pida.
-        # Sin embargo, como el RDT va a consumirlo, necesitamos peekear el
-        # tipo ANTES de que el RDT lo consuma. Lo hacemos parseando el raw.
         raw = self._peek_raw(data)
+
         if raw is None:
-            return  # paquete corrupto, ignorar
+            return
 
         msg_type, op = raw
 
         if msg_type != CodMsj.REQUEST:
-            return  # primer mensaje debe ser siempre un REQUEST
+            return
 
         if op == CodOp.UPLOAD:
             ResponseUpload(self._rdt, self._serializer, self.storage).ejecutar()
@@ -45,18 +35,9 @@ class ClientHandler:
             ResponseDownload(self._rdt, self._serializer, self.storage).ejecutar()
 
     def receive(self, data):
-        """
-        Recibe mensajes siguientes del mismo cliente durante la transferencia.
-        Los deposita en la cola para que el RDT los consuma.
-        """
         self._inbox.put((data, self.addr))
 
     def _peek_raw(self, data: bytes):
-        """
-        Extrae tipo de mensaje y operación del segmento RDT sin consumirlo.
-        Retorna (CodMsj, CodOp) o None si el paquete es inválido.
-        """
-        # El segmento RDT tiene 4 bytes de header, luego el payload de aplicación
         HEADER_SIZE = 4
         if len(data) < HEADER_SIZE + 2:
             return None
