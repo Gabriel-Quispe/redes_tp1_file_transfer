@@ -24,7 +24,7 @@ El diseño del header se alinea en 4 palabras de 32 bits (Sumando un total de 16
 5. __Checksum__ (2 Bytes): Valor calculado sobre todo el paquete mediante CRC32 y truncado a 16 bits que soporta una verificación de integridad más robusta que la ofrecida por UDP.
 6. __Payload Length__ (2 Bytes): 
 
-```   0                               16                              32
+```   0                               16                              31
       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       |    Opcode     |                    Padding                    |
