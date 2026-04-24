@@ -21,6 +21,10 @@ __En h1__:
 ```
 python3 upload.py
  ```
+Para que Wireshark detecte el protocolo RFTP dentro de mininet, hay que copiar el plugin a esta direccion:
+```
+sudo cp plugin_wireshark.lua /usr/lib/x86_64-linux-gnu/wireshark/plugins/
+```
 **Participantes:**
 1. 
 2. 
