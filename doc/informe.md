@@ -21,7 +21,7 @@ El diseño del header se alinea en 4 palabras de 32 bits (Sumando un total de 16
 2. __Padding__ (3 Bytes): Para alineación (sujeto a cambios y nuevas características).Este campo asegura que los campos definidos comiencen en direcciones de memoria alineadas, evitando overhead en el procesamiento de cada paquete
 3. __Sequence Number__ (4 Bytes): Número de secuencia del paquete con soporte para 2³² segmentos
 4. __Window Size__ (4 Bytes): para soportar el control de flujo en el servidor para múltiples clientes concurrentes
-5. __Checksum__ (2 Bytes): Valorcalculado sobre todo el paquete mediante CRC32 y truncado a 16 bits que soporta una verificación de integridad más robusta que la ofrecida por UDP.
+5. __Checksum__ (2 Bytes): Valor calculado sobre todo el paquete mediante CRC32 y truncado a 16 bits que soporta una verificación de integridad más robusta que la ofrecida por UDP.
 6. __Payload Length__ (2 Bytes): 
 
 ```   0                               16                              32
