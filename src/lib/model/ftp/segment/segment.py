@@ -1,15 +1,5 @@
-
-#Implementar clase segmento, similar al TCP pero con menos parametros
-
-class Segment:
-
-	def __init__(self, src_port, dest_port):
-		self.src_port = src_port
-		self.dest_port = dest_port
-
-
-import struct
 import zlib
+import struct
 
 # En struct:        Bytes
 # x= 1byte          1
@@ -55,8 +45,7 @@ import zlib
 HEADER_FORMAT = "!B3xIIHH"
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)  # 16 BYTES TOTALES
 
-
-class Packet:
+class Segment:
     def __init__(self, opcode, seq_num, wsize, payload):
         self.opcode = opcode
         self.seq_num = seq_num
@@ -92,4 +81,4 @@ class Packet:
             raise ValueError("Datos corruptos")
 
         payload = payload[:plen]
-        return Packet(opcode, seq_number, wsize, payload)
+        return Segment(opcode, seq_number, wsize, payload)
