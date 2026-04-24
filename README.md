@@ -11,7 +11,7 @@ sudo mn --custom ./topologia.py --topo tp2 --mac --switch ovsk --controller none
 ```
 xterm h1 h2
 ```
-3. (Provisional) Ejecutar cliente o servidor en cada host, por ejemplo si h1 es el cliente y h2 el servidor:
+3. (__*Provisional*__) Ejecutar cliente o servidor en cada host, por ejemplo si h1 es el cliente y h2 el servidor:
 
 __En h2__:
 ```
