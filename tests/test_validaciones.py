@@ -2,17 +2,21 @@ import os
 
 from pytest_bdd import given, when, then, scenario, parsers
 
-from validations.host import HostValidation
-from validations.port import PortValidation
-from validations.name import NameValidation
-from validations.protocol import ProtocolValidation
-from validations.file import FileValidation
-from validations.folder import FolderValidation
+from view.validations.host import HostValidation
+from view.validations.port import PortValidation
+from view.validations.name import NameValidation
+from view.validations.protocol import ProtocolValidation
+from view.validations.file import FileValidation
+from view.validations.folder import FolderValidation
 
 FEATURE = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../features/validaciones.feature")
 )
 
+
+# ---------------------------------------------------------------------------
+# Scenarios
+# ---------------------------------------------------------------------------
 
 @scenario(FEATURE, "Host válido como IP")
 def test_host_ip():
@@ -106,9 +110,7 @@ def test_carpeta_padre_inexistente():
 
 # ---------------------------------------------------------------------------
 # Givens
-# FIX: Feature uses "Dado que X" → step text is "que X", so prefix "que " here.
 # ---------------------------------------------------------------------------
-
 
 @given(parsers.parse('que existe un archivo "{path}" con contenido "{contenido}"'))
 def step_crear_archivo(ctx, path, contenido):
@@ -134,7 +136,6 @@ def step_crear_carpeta(ctx, path):
 # Whens
 # ---------------------------------------------------------------------------
 
-
 @when(parsers.parse('valido el host "{host}"'))
 def step_validar_host(ctx, host):
     try:
@@ -153,8 +154,6 @@ def step_validar_puerto(ctx, puerto):
         ctx["error"] = str(e)
 
 
-# FIX: Use parsers.re so that empty string ("") is matched correctly.
-# parsers.parse("{nombre}" does not match empty strings by default.
 @when(parsers.re(r'valido el nombre "(?P<nombre>[^"]*)"'))
 def step_validar_nombre(ctx, nombre):
     try:
@@ -194,7 +193,6 @@ def step_validar_carpeta(ctx, path):
 # ---------------------------------------------------------------------------
 # Thens
 # ---------------------------------------------------------------------------
-
 
 @then("la validación pasa sin error")
 def step_sin_error(ctx):

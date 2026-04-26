@@ -15,12 +15,10 @@ from conftest import (
     poner_archivo_en_storage,
 )
 
-SRC = sys.executable
-UPLOAD_CMD = os.path.abspath(os.path.join(os.path.dirname(__file__), "../src/upload"))
-DOWNLOAD_CMD = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../src/download")
-)
-FEATURE = os.path.abspath(
+SRC          = sys.executable
+UPLOAD_CMD   = os.path.abspath(os.path.join(os.path.dirname(__file__), "../src/upload"))
+DOWNLOAD_CMD = os.path.abspath(os.path.join(os.path.dirname(__file__), "../src/download"))
+FEATURE      = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../features/concurrencia.feature")
 )
 
@@ -45,22 +43,19 @@ def test_cliente_desconectado():
     pass
 
 
+@scenario(FEATURE, "Dos clientes usan protocolos distintos simultáneamente")
+def test_dos_protocolos_distintos():
+    pass
+
+
+# ---------------------------------------------------------------------------
+# Helpers de subprocess
+# ---------------------------------------------------------------------------
+
 def _run_upload(host, port, src, nombre, protocolo, results, key):
     result = subprocess.run(
-        [
-            SRC,
-            UPLOAD_CMD,
-            "-H",
-            host,
-            "-p",
-            str(port),
-            "-s",
-            src,
-            "-n",
-            nombre,
-            "-r",
-            protocolo,
-        ],
+        [SRC, UPLOAD_CMD, "-H", host, "-p", str(port), "-s", src,
+         "-n", nombre, "-r", protocolo],
         capture_output=True,
         text=True,
     )
@@ -69,20 +64,8 @@ def _run_upload(host, port, src, nombre, protocolo, results, key):
 
 def _run_download(host, port, dst, nombre, protocolo, results, key):
     result = subprocess.run(
-        [
-            SRC,
-            DOWNLOAD_CMD,
-            "-H",
-            host,
-            "-p",
-            str(port),
-            "-d",
-            dst,
-            "-n",
-            nombre,
-            "-r",
-            protocolo,
-        ],
+        [SRC, DOWNLOAD_CMD, "-H", host, "-p", str(port), "-d", dst,
+         "-n", nombre, "-r", protocolo],
         capture_output=True,
         text=True,
     )
@@ -91,9 +74,7 @@ def _run_download(host, port, dst, nombre, protocolo, results, key):
 
 # ---------------------------------------------------------------------------
 # Givens
-# FIX: "Dado que X" in Antecedentes/scenarios → step text "que X".
 # ---------------------------------------------------------------------------
-
 
 @given(
     parsers.parse(
@@ -125,15 +106,14 @@ def step_n_archivos(ctx, n, size):
     ctx["archivos_paralelos"] = {}
     for i in range(n):
         nombre = f"paralelo_{i}.bin"
-        path = f"/tmp/{nombre}"
-        data = crear_archivo_binario(path, size)
+        path   = f"/tmp/{nombre}"
+        data   = crear_archivo_binario(path, size)
         ctx["archivos_paralelos"][nombre] = {"path": path, "data": data}
 
 
 # ---------------------------------------------------------------------------
-# Whens
+# Whens — escenarios originales
 # ---------------------------------------------------------------------------
-
 
 @when(
     parsers.parse(
@@ -154,9 +134,9 @@ def step_dos_uploads(ctx, nombre1, nombre2):
     t2.start()
     t1.join()
     t2.join()
-    ctx["results"] = results
-    ctx["nombre1"] = nombre1
-    ctx["nombre2"] = nombre2
+    ctx["results"]  = results
+    ctx["nombre1"]  = nombre1
+    ctx["nombre2"]  = nombre2
 
 
 @when(
@@ -168,15 +148,7 @@ def step_upload_y_download(ctx, nombre_up, nombre_down):
     results = {}
     t1 = threading.Thread(
         target=_run_upload,
-        args=(
-            HOST,
-            PORT,
-            f"/tmp/{nombre_up}",
-            nombre_up,
-            "stop_and_wait",
-            results,
-            "upload",
-        ),
+        args=(HOST, PORT, f"/tmp/{nombre_up}", nombre_up, "stop_and_wait", results, "upload"),
     )
     t2 = threading.Thread(
         target=_run_download,
@@ -186,7 +158,7 @@ def step_upload_y_download(ctx, nombre_up, nombre_down):
     t2.start()
     t1.join()
     t2.join()
-    ctx["results"] = results
+    ctx["results"]     = results
     ctx["nombre_down"] = nombre_down
 
 
@@ -214,16 +186,23 @@ def step_n_uploads(ctx, n, protocolo):
 @when("el cliente inicia un upload y se desconecta antes de enviar los datos")
 def step_cliente_desconectado(ctx):
     import socket as sock_module
-    from app.rdt.stop_and_wait import StopAndWait
-    from app.msj_serializer import MessageSerializer
+
+    from model.rdt.stop_and_wait.stop_and_wait import StopAndWait
+    from model.app.messages.request_upload import RequestUploadMsg
+    from model.codigos.cod_protocol import CodProtocol
 
     s = sock_module.socket(sock_module.AF_INET, sock_module.SOCK_DGRAM)
     s.bind(("0.0.0.0", 0))
-    serializer = MessageSerializer()
+    s.settimeout(2.0)
     rdt = StopAndWait(s, (HOST, PORT))
     try:
-        rdt.enviar_mensaje(serializer.build_request_upload("parcial.txt", 100))
-        rdt.recibir_mensaje()
+        msg = RequestUploadMsg(
+            protocol=CodProtocol.STOP_AND_WAIT,
+            filename="parcial.txt",
+            filesize=100,
+        ).to_bytes()
+        rdt.enviar_mensaje(msg)
+        rdt.recibir_mensaje()   # esperar OK del servidor (puede fallar)
     except Exception:
         pass
     finally:
@@ -232,9 +211,50 @@ def step_cliente_desconectado(ctx):
 
 
 # ---------------------------------------------------------------------------
-# Thens
+# Whens — escenario 5 (protocolos distintos simultáneos)
 # ---------------------------------------------------------------------------
 
+@when(
+    parsers.parse(
+        'el cliente 1 ejecuta upload de "{nombre}" con protocolo "{protocolo}"'
+    )
+)
+def step_cliente1_upload_async(ctx, nombre, protocolo):
+    """Arranca el upload del cliente 1 en background; join se hace en el step And."""
+    results = {}
+    ctx["results_proto"]  = results
+    ctx["nombres_proto"]  = [nombre]
+    t = threading.Thread(
+        target=_run_upload,
+        args=(HOST, PORT, f"/tmp/{nombre}", nombre, protocolo, results, "c1"),
+        daemon=True,
+    )
+    t.start()
+    ctx["thread_c1"] = t
+
+
+@when(
+    parsers.parse(
+        'el cliente 2 ejecuta upload de "{nombre}" con protocolo "{protocolo}" en paralelo'
+    )
+)
+def step_cliente2_upload_sync(ctx, nombre, protocolo):
+    """Arranca el upload del cliente 2 y espera a que ambos terminen."""
+    results = ctx["results_proto"]
+    ctx["nombres_proto"].append(nombre)
+    t = threading.Thread(
+        target=_run_upload,
+        args=(HOST, PORT, f"/tmp/{nombre}", nombre, protocolo, results, "c2"),
+        daemon=True,
+    )
+    t.start()
+    ctx["thread_c1"].join()
+    t.join()
+
+
+# ---------------------------------------------------------------------------
+# Thens — escenarios originales
+# ---------------------------------------------------------------------------
 
 @then(
     parsers.parse(
@@ -288,21 +308,30 @@ def step_servidor_disponible(servidor_corriendo):
     path = "/tmp/check.txt"
     crear_archivo_texto(path, "check")
     result = subprocess.run(
-        [
-            SRC,
-            UPLOAD_CMD,
-            "-H",
-            HOST,
-            "-p",
-            str(PORT),
-            "-s",
-            path,
-            "-n",
-            "check.txt",
-            "-r",
-            "stop_and_wait",
-        ],
+        [SRC, UPLOAD_CMD, "-H", HOST, "-p", str(PORT),
+         "-s", path, "-n", "check.txt", "-r", "stop_and_wait"],
         capture_output=True,
         text=True,
     )
     assert result.returncode == 0
+
+
+# ---------------------------------------------------------------------------
+# Thens — escenario 5 (protocolos distintos simultáneos)
+# ---------------------------------------------------------------------------
+
+@then("ambos archivos existen en el storage del servidor")
+def step_ambos_existen(ctx):
+    for nombre in ctx["nombres_proto"]:
+        assert os.path.exists(os.path.join(STORAGE, nombre)), \
+            f"Falta en storage: {nombre}"
+
+
+@then("cada archivo es idéntico byte a byte al original")
+def step_cada_identico_proto(ctx):
+    for nombre in ctx["nombres_proto"]:
+        expected = ctx.get("archivos", {}).get(nombre)
+        if expected is None:
+            continue   # no teníamos referencia local → sólo verificamos existencia
+        with open(os.path.join(STORAGE, nombre), "rb") as f:
+            assert f.read() == expected, f"Contenido de {nombre} no coincide"

@@ -7,13 +7,15 @@ from pytest_bdd import given, when, then, scenario, parsers
 
 from conftest import STORAGE, poner_archivo_en_storage
 
-SRC = sys.executable
+SRC          = sys.executable
 DOWNLOAD_CMD = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../src/download")
 )
 FEATURE = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../features/download.feature")
 )
+
+SUBPROCESS_TIMEOUT = 35
 
 
 @scenario(FEATURE, "Descarga exitosa de un archivo de texto")
@@ -68,9 +70,7 @@ def test_download_sin_servidor():
 
 # ---------------------------------------------------------------------------
 # Givens
-# FIX: "Dado que X" in Antecedentes/scenarios → step text "que X".
 # ---------------------------------------------------------------------------
-
 
 @given(
     parsers.parse(
@@ -89,7 +89,7 @@ def step_servidor_corriendo(servidor_corriendo):
 def step_servidor_tiene_archivo(ctx, nombre, contenido):
     data = contenido.encode()
     poner_archivo_en_storage(nombre, data)
-    ctx["nombre"] = nombre
+    ctx["nombre"]             = nombre
     ctx["contenido_original"] = data
 
 
@@ -99,7 +99,7 @@ def step_servidor_tiene_archivo(ctx, nombre, contenido):
 def step_servidor_tiene_binario(ctx, nombre, size):
     data = os.urandom(size * 1024 * 1024)
     poner_archivo_en_storage(nombre, data)
-    ctx["nombre"] = nombre
+    ctx["nombre"]             = nombre
     ctx["contenido_original"] = data
 
 
@@ -111,14 +111,12 @@ def step_servidor_no_tiene(ctx, nombre):
     ctx["nombre"] = nombre
 
 
-# FIX: feature says "Dado que existe la carpeta de destino" → "que existe la carpeta de destino"
 @given(parsers.parse('que existe la carpeta de destino "{path}"'))
 def step_existe_carpeta(ctx, path):
     os.makedirs(path, exist_ok=True)
     ctx["dst"] = path
 
 
-# FIX: feature says "Dado que la carpeta de destino ... no tiene permisos" → "que la carpeta..."
 @given(
     parsers.parse('que la carpeta de destino "{path}" no tiene permisos de escritura')
 )
@@ -139,44 +137,47 @@ def step_red_corrupcion(ctx):
 
 
 @given("que el servidor no está corriendo")
-def step_sin_servidor():
-    pass
+def step_sin_servidor(ctx):
+    ctx["override_port"] = 19999
 
 
 # ---------------------------------------------------------------------------
 # Whens
 # ---------------------------------------------------------------------------
 
-
 @when(
     parsers.parse(
-        'ejecuto download con host "{host}" puerto {port:d} dst "{dst}" nombre "{nombre}" protocolo "{protocolo}"'
+        'ejecuto download con host "{host}" puerto {port:d} dst "{dst}" '
+        'nombre "{nombre}" protocolo "{protocolo}"'
     )
 )
 def step_ejecuto_download(ctx, host, port, dst, nombre, protocolo):
-    dest = ctx.get("dst", dst)
+    port  = ctx.pop("override_port", port)
+    dest  = ctx.get("dst", dst)
     start = time.time()
-    result = subprocess.run(
-        [
-            SRC,
-            DOWNLOAD_CMD,
-            "-H",
-            host,
-            "-p",
-            str(port),
-            "-d",
-            dest,
-            "-n",
-            nombre,
-            "-r",
-            protocolo,
-        ],
-        capture_output=True,
-        text=True,
-    )
-    ctx["result"] = result
-    ctx["nombre"] = ctx.get("nombre", nombre)
-    ctx["dst"] = dest
+    try:
+        result = subprocess.run(
+            [SRC, DOWNLOAD_CMD,
+             "-H", host,
+             "-p", str(port),
+             "-d", dest,
+             "-n", nombre,
+             "-r", protocolo],
+            capture_output=True,
+            text=True,
+            timeout=SUBPROCESS_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as e:
+        # Tratamos el timeout como fallo del comando (returncode != 0).
+        result = subprocess.CompletedProcess(
+            args=e.cmd,
+            returncode=1,
+            stdout="",
+            stderr="[TIMEOUT] El comando no terminó en el tiempo esperado",
+        )
+    ctx["result"]  = result
+    ctx["nombre"]  = ctx.get("nombre", nombre)
+    ctx["dst"]     = dest
     ctx["elapsed"] = time.time() - start
 
 
@@ -184,10 +185,9 @@ def step_ejecuto_download(ctx, host, port, dst, nombre, protocolo):
 # Thens
 # ---------------------------------------------------------------------------
 
-
 @then(parsers.parse('el archivo "{path}" existe'))
 def step_archivo_existe(path):
-    assert os.path.exists(path)
+    assert os.path.exists(path), f"No existe: {path}"
 
 
 @then(parsers.parse('el contenido del archivo descargado es "{contenido}"'))
@@ -206,16 +206,21 @@ def step_identico_descargado(ctx):
 
 @then(parsers.parse("el download finaliza en menos de {segundos:d} segundos"))
 def step_download_tiempo(ctx, segundos):
-    assert ctx["elapsed"] < segundos
+    assert ctx["elapsed"] < segundos, (
+        f"Download tardó {ctx['elapsed']:.1f}s, límite {segundos}s"
+    )
 
 
 @then(parsers.parse('el comando falla con el error "{mensaje}"'))
 def step_falla_con_error(ctx, mensaje):
     salida = ctx["result"].stdout + ctx["result"].stderr
-    assert ctx["result"].returncode != 0 or mensaje in salida
+    assert ctx["result"].returncode != 0 or mensaje in salida, (
+        f"Se esperaba error '{mensaje}' pero la salida fue:\n{salida}"
+    )
 
 
 @then(parsers.parse('no se crea ningún archivo en "{path}"'))
 def step_no_hay_archivo(path):
     if os.path.exists(path):
-        assert len(os.listdir(path)) == 0
+        archivos = [f for f in os.listdir(path) if not f.startswith(".")]
+        assert len(archivos) == 0, f"Se encontraron archivos en {path}: {archivos}"

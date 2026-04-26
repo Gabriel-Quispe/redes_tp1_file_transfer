@@ -5,17 +5,17 @@ import time
 
 import pytest
 
-from server.dispatcher import ClientDispatcher
-from server.listener import ServerListener
-from server.socket import ServerSocket
-from server.registry import ClientRegistry
+from controller.server.dispatcher import ClientDispatcher
+from controller.server.listener import ServerListener
+from controller.server.socket import ServerSocket
+from controller.server.registry import ClientRegistry
 
 
 # Valores alineados con los .feature files
 STORAGE = "/tmp/storage"
 DESTINO = "/tmp/destino"
-HOST = "127.0.0.1"
-PORT = 8000
+HOST    = "127.0.0.1"
+PORT    = 8000
 
 
 @pytest.fixture(autouse=True)
@@ -30,35 +30,26 @@ def limpiar_carpetas():
             shutil.rmtree(path)
 
 
-# Registro global para no levantar dos veces el mismo servidor en el mismo test
-_servidores_activos: dict[tuple, dict] = {}
-_servidores_lock = threading.Lock()
-
-
 @pytest.fixture
-def servidor_corriendo(request):
+def servidor_corriendo():
     """
     Levanta un servidor en HOST:PORT con STORAGE.
     Soporta que el step le pase host/port/storage distintos vía
     parametrize indirecto — pero en la práctica los features siempre
     usan 127.0.0.1:8000:/tmp/storage, que son las constantes de arriba.
     """
-    host = HOST
-    port = PORT
-    storage = STORAGE
-
-    server_socket = ServerSocket(host, port)
-    registry = ClientRegistry()
-    dispatcher = ClientDispatcher(server_socket, storage, registry)
-    listener = ServerListener(server_socket, dispatcher)
-    thread = threading.Thread(target=listener.start)
+    server_socket = ServerSocket(HOST, PORT)
+    registry      = ClientRegistry()
+    dispatcher    = ClientDispatcher(server_socket, STORAGE, registry)
+    listener      = ServerListener(server_socket, dispatcher)
+    thread        = threading.Thread(target=listener.start)
     thread.daemon = True
     thread.start()
-    time.sleep(0.15)  # dar tiempo al thread para que el bind esté listo
-    yield {"host": host, "port": port, "storage": storage}
+    time.sleep(0.15)   # dar tiempo al thread para que el bind esté listo
+    yield {"host": HOST, "port": PORT, "storage": STORAGE}
     listener.stop()
     server_socket.close()
-    time.sleep(0.05)  # pequeña pausa para que el SO libere el puerto
+    time.sleep(0.05)   # pequeña pausa para que el SO libere el puerto
 
 
 @pytest.fixture

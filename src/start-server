@@ -6,7 +6,7 @@ import os
 sys.pycache_prefix = "/tmp/pycache"
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
 
-from command.server import ServerCommand
+from controller.command.server import ServerCommand
 
 if __name__ == "__main__":
     ServerCommand().execute()

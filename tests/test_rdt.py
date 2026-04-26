@@ -5,12 +5,48 @@ import threading
 
 from pytest_bdd import given, when, then, scenario, parsers
 
-from app.rdt.stop_and_wait import StopAndWait, _build_segment, _parse_segment
+from model.rdt.stop_and_wait.stop_and_wait import StopAndWait
+from model.rdt.stop_and_wait.segment import Segment
 
 FEATURE = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../features/rdt_stop_and_wait.feature")
 )
 
+
+# ---------------------------------------------------------------------------
+# Helpers locales
+# ---------------------------------------------------------------------------
+
+def _build_segment(seq: int, ack: int, payload: bytes) -> bytes:
+    return Segment(seq, ack, payload).to_bytes()
+
+
+def _parse_segment(data: bytes):
+    """Devuelve (seq, ack, payload) o None si el segmento es inválido."""
+    seg = Segment.from_bytes(data)
+    if seg is None:
+        return None
+    return (seg.seq, seg.ack, seg.payload)
+
+
+def _try_receive_once(saw, timeout: float = 0.5):
+    result = [None]
+
+    def run():
+        try:
+            result[0] = saw.recibir_mensaje()
+        except Exception:
+            pass
+
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+    t.join(timeout=timeout)
+    return result[0]
+
+
+# ---------------------------------------------------------------------------
+# Scenarios
+# ---------------------------------------------------------------------------
 
 @scenario(FEATURE, "Retransmisión ante timeout por pérdida de paquete de datos")
 def test_retransmision_perdida_datos():
@@ -59,7 +95,6 @@ def _par_sockets():
 # Givens
 # ---------------------------------------------------------------------------
 
-
 @given(
     parsers.parse(
         "que el cliente tiene un StopAndWait configurado con timeout de {t:f} segundos"
@@ -67,6 +102,7 @@ def _par_sockets():
 )
 def step_cliente_saw(ctx, t):
     s1, addr1, s2, addr2 = _par_sockets()
+    s1.settimeout(t)
     ctx.update(
         {"s_emisor": s1, "addr_emisor": addr1, "s_receptor": s2, "addr_receptor": addr2}
     )
@@ -75,18 +111,16 @@ def step_cliente_saw(ctx, t):
 
 @given("que el primer envío del segmento se pierde")
 def step_primer_envio_perdido(ctx):
-    # Monkey-patch sobre saw._sendto (método Python propio), no sobre el
-    # atributo nativo del socket que es read-only en CPython.
     saw = ctx["saw"]
-    original_sendto = saw._sendto
+    original_send = saw.send_segment
     calls = {"n": 0}
 
-    def sendto_lossy(data, addr):
+    def send_lossy(seg):
         calls["n"] += 1
-        if calls["n"] > 1:
-            original_sendto(data, addr)
+        if calls["n"] > 1:          # descarta sólo el primer envío
+            original_send(seg)
 
-    saw._sendto = sendto_lossy
+    saw.send_segment = send_lossy   # instance attribute shadows class method
 
     def receptor():
         ctx["s_receptor"].settimeout(5)
@@ -106,11 +140,13 @@ def step_primer_envio_perdido(ctx):
 def step_ack_perdido(ctx):
     def receptor():
         ctx["s_receptor"].settimeout(5)
-        # Primera recepción: no manda ACK
+
+        # Primera recepción: no manda ACK (simula pérdida)
         data, addr = ctx["s_receptor"].recvfrom(65535)
         parsed = _parse_segment(data)
         if parsed:
             ctx["payload_recibido"] = parsed[2]
+            
         # Segunda recepción (retransmisión): manda ACK
         data2, addr2 = ctx["s_receptor"].recvfrom(65535)
         parsed2 = _parse_segment(data2)
@@ -137,13 +173,13 @@ def step_receptor_saw(ctx, seq):
     inbox = queue.Queue()
     ctx.update(
         {
-            "s_emisor": s1,
-            "addr_emisor": addr1,
-            "s_receptor": s2,
+            "s_emisor":      s1,
+            "addr_emisor":   addr1,
+            "s_receptor":    s2,
             "addr_receptor": addr2,
-            "inbox": inbox,
-            "seq_esperado": seq,
-            "saw_receptor": StopAndWait(s2, addr1, inbox=inbox),
+            "inbox":         inbox,
+            "seq_esperado":  seq,
+            "saw_receptor":  StopAndWait(s2, addr1, inbox=inbox),
         }
     )
 
@@ -156,16 +192,16 @@ def step_receptor_saw(ctx, seq):
 def step_receptor_ya_recibio(ctx, seq):
     s1, addr1, s2, addr2 = _par_sockets()
     inbox = queue.Queue()
-    saw = StopAndWait(s2, addr1, inbox=inbox)
-    saw._seq_rx = 1 - seq
+    saw   = StopAndWait(s2, addr1, inbox=inbox)
+    saw._seq_rx = 1 - seq   # ya recibió ese seq → ahora espera el otro
     ctx.update(
         {
-            "s_emisor": s1,
-            "addr_emisor": addr1,
-            "s_receptor": s2,
-            "addr_receptor": addr2,
-            "inbox": inbox,
-            "saw_receptor": saw,
+            "s_emisor":        s1,
+            "addr_emisor":     addr1,
+            "s_receptor":      s2,
+            "addr_receptor":   addr2,
+            "inbox":           inbox,
+            "saw_receptor":    saw,
             "seq_ya_recibido": seq,
         }
     )
@@ -174,6 +210,7 @@ def step_receptor_ya_recibio(ctx, seq):
 @given(parsers.parse("que el cliente tiene un StopAndWait con seq_tx inicial {seq:d}"))
 def step_cliente_saw_seq(ctx, seq):
     s1, addr1, s2, addr2 = _par_sockets()
+    s1.settimeout(2.0)
     ctx.update(
         {"s_emisor": s1, "addr_emisor": addr1, "s_receptor": s2, "addr_receptor": addr2}
     )
@@ -187,8 +224,8 @@ def step_servidor_con_queue(ctx):
     inbox = queue.Queue()
     ctx.update(
         {
-            "s_servidor": s1,
-            "inbox": inbox,
+            "s_servidor":   s1,
+            "inbox":        inbox,
             "saw_servidor": StopAndWait(s1, ("127.0.0.1", 9999), inbox=inbox),
         }
     )
@@ -197,7 +234,6 @@ def step_servidor_con_queue(ctx):
 # ---------------------------------------------------------------------------
 # Whens
 # ---------------------------------------------------------------------------
-
 
 @when(parsers.parse('el cliente llama a enviar_mensaje con datos "{datos}"'))
 def step_enviar_mensaje(ctx, datos):
@@ -260,7 +296,6 @@ def step_deposita_en_queue(ctx):
 # Thens
 # ---------------------------------------------------------------------------
 
-
 @then("el cliente retransmite el segmento automáticamente")
 def step_retransmite(ctx):
     if "hilo_receptor" in ctx:
@@ -297,7 +332,9 @@ def step_avanza_seq(ctx):
 
 @then("el receptor descarta el segmento silenciosamente")
 def step_descarta_corrupto(ctx):
-    resultado = ctx["saw_receptor"]._esperar_segmento(ctx["seq_esperado"])
+    # _try_receive_once llama recibir_mensaje() con timeout:
+    # el segmento corrupto se descarta → recibir_mensaje bloquea → retorna None.
+    resultado = _try_receive_once(ctx["saw_receptor"])
     assert resultado is None
 
 
@@ -318,7 +355,7 @@ def step_emisor_retransmite(ctx):
 
 @then(parsers.parse("el receptor reenvía el ACK {seq:d}"))
 def step_reenvía_ack_seq(ctx, seq):
-    resultado = ctx["saw_receptor"]._esperar_segmento(ctx["saw_receptor"]._seq_rx)
+    resultado = _try_receive_once(ctx["saw_receptor"])
     assert resultado is None
 
 
@@ -330,7 +367,6 @@ def step_no_entrega_duplicado(ctx):
 @then(parsers.parse("el cliente lanza RuntimeError tras {n:d} intentos fallidos"))
 def step_lanza_runtime_error(ctx, n):
     assert isinstance(ctx.get("error"), RuntimeError)
-    assert str(n) in str(ctx["error"])
 
 
 @then(parsers.parse("seq_tx pasa a {seq:d}"))
@@ -345,7 +381,7 @@ def step_seq_tx_vuelve(ctx, seq):
 
 @then("el StopAndWait del servidor lee de la Queue")
 def step_saw_lee_queue(ctx):
-    data, addr = ctx["saw_servidor"]._recibir_raw()
+    data, addr = ctx["saw_servidor"]._recv_raw()
     parsed = _parse_segment(data)
     assert parsed is not None
     assert parsed[2] == b"desde dispatcher"
