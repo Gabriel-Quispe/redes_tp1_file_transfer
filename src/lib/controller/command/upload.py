@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import socket as s
 import sys
 
@@ -33,3 +34,13 @@ class UploadCommand:
         except (ValueError, OSError, RuntimeError) as e:
             print(f"[ERROR] {e}", file=sys.stderr)
             sys.exit(1)
+=======
+from cli.upload import UploadCLI
+from params.upload import UploadParams
+
+
+class UploadCommand:
+    def execute(left):
+        args = UploadCLI().args()
+        params = UploadParams(args)
+>>>>>>> main

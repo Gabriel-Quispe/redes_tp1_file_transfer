@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import threading as th
 
 from view.cli.server import ServerCLI
@@ -19,6 +20,28 @@ class ServerCommand:
         listener = ServerListener(sk, dispatcher)
 
         thread = th.Thread(target=listener.start, daemon=True)
+=======
+import threading
+
+from cli.server import ServerCLI
+from params.server import ServerParams
+from server.socket import ServerSocket
+from server.dispatcher import ClientDispatcher
+from server.listener import ServerListener
+
+
+class ServerCommand:
+    def execute(self):
+        args = ServerCLI().args()
+        params = ServerParams(args)
+
+        server_socket = ServerSocket(params.host, params.port)
+        dispatcher = ClientDispatcher(server_socket, params.storage)
+        listener = ServerListener(server_socket, dispatcher)
+
+        thread = threading.Thread(target=listener.start)
+        thread.daemon = True
+>>>>>>> main
         thread.start()
 
         while input() != "exit":
@@ -26,4 +49,8 @@ class ServerCommand:
 
         print("Shutting down server...")
         listener.stop()
+<<<<<<< HEAD
         sk.close()
+=======
+        server_socket.close()
+>>>>>>> main
