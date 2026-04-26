@@ -1,10 +1,12 @@
-from model.codigos.cod_error import CodError
-from model.codigos.cod_msj import CodMsj
+from pathlib import Path
+
 from model.app.messages.data_chunk import DataChunkMsg
 from model.app.messages.err import ErrMsg
 from model.app.messages.msg_type import peek_type
 from model.app.messages.request_download import RequestDownloadMsg
 from model.app.messages.response_filesize import ResponseFilesizeMsg
+from model.codigos.cod_error import CodError
+from model.codigos.cod_msj import CodMsj
 from model.rdt.rdt import RDTProtocol
 
 
@@ -15,12 +17,12 @@ class ResponseDownload:
     """
 
     def __init__(self, rdt: RDTProtocol, storage_dir: str) -> None:
-        self._rdt         = rdt
+        self._rdt = rdt
         self._storage_dir = storage_dir
 
     def ejecutar(self, first_msg: bytes) -> None:
         # 1. Parsear REQUEST (ya recibido por SessionDispatcher)
-        request  = RequestDownloadMsg.from_bytes(first_msg)
+        request = RequestDownloadMsg.from_bytes(first_msg)
         filepath = f"{self._storage_dir}/{request.filename}"
 
         # 2. Verificar que el archivo existe
@@ -43,7 +45,7 @@ class ResponseDownload:
 
     def _leer_archivo(self, filepath: str) -> bytes | None:
         try:
-            with open(filepath, "rb") as f:
+            with Path(filepath).open("rb") as f:
                 return f.read()
         except FileNotFoundError:
             return None

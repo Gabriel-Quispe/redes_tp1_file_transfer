@@ -4,7 +4,7 @@ import threading as th
 class ClientRegistry:
     def __init__(self):
         self._clients = {}
-        self._lock    = th.Lock()
+        self._lock = th.Lock()
 
     def register_if_new(self, addr, factory):
         with self._lock:

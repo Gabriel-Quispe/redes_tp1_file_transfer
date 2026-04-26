@@ -1,25 +1,23 @@
-import socket
-
-from model.rdt.udp import UDPBase
-from model.rdt.stop_and_wait.segment import Segment
-from model.rdt.selective_repeat.window import SRWindow
-from model.rdt.selective_repeat.timer import SRTimerManager
 from model.rdt.selective_repeat.buffer import SRBuffer
+from model.rdt.selective_repeat.timer import SRTimerManager
+from model.rdt.selective_repeat.window import SRWindow
+from model.rdt.stop_and_wait.segment import Segment
+from model.rdt.udp import UDPBase
 
-WINDOW_SIZE  = 8
-MAX_SEQ      = 16
-TIMEOUT      = 0.5
+WINDOW_SIZE = 8
+MAX_SEQ = 16
+TIMEOUT = 0.5
 MAX_INTENTOS = 50
 
 
 class SelectiveRepeat(UDPBase):
     def __init__(self, sock, addr, inbox=None):
         super().__init__(sock, addr, inbox)
-        self._window         = SRWindow(WINDOW_SIZE, MAX_SEQ)
-        self._timers         = SRTimerManager(TIMEOUT)
-        self._buffer         = SRBuffer(MAX_SEQ)
+        self._window = SRWindow(WINDOW_SIZE, MAX_SEQ)
+        self._timers = SRTimerManager(TIMEOUT)
+        self._buffer = SRBuffer(MAX_SEQ)
         self._acked: set[int] = set()
-        self._next_seq       = 0
+        self._next_seq = 0
         self._sent_payloads: dict[int, bytes] = {}
 
     # ------------------------------------------------------------------
@@ -36,9 +34,7 @@ class SelectiveRepeat(UDPBase):
             self._retransmitir_expirados()
             intentos += 1
             if intentos > MAX_INTENTOS:
-                raise RuntimeError(
-                    f"Ventana llena sin ACKs tras {MAX_INTENTOS} intentos"
-                )
+                raise RuntimeError(f"Ventana llena sin ACKs tras {MAX_INTENTOS} intentos")
 
         # Guardar payload para posible retransmisión
         self._sent_payloads[seq] = data
@@ -82,7 +78,7 @@ class SelectiveRepeat(UDPBase):
         """Lee un ACK disponible sin bloquearse (timeout corto)."""
         try:
             data, _ = self._recv_raw()
-        except (TimeoutError, socket.timeout, OSError):
+        except (TimeoutError, OSError):
             return
 
         seg = Segment.from_bytes(data)

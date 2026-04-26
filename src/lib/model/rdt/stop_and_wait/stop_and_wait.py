@@ -1,5 +1,5 @@
-from model.rdt.udp import UDPBase
 from model.rdt.stop_and_wait.segment import Segment
+from model.rdt.udp import UDPBase
 
 MAX_INTENTOS = 3
 

@@ -1,11 +1,7 @@
-from transfer.upload import UploadTransfer
-from transfer.download import DownloadTransfer
-
-
 class ClientHandler:
     def __init__(self, sock, addr, storage):
-        self.sock = sock        # socket UDP compartido del servidor
-        self.addr = addr        # direccion del cliente (ip, puerto)
+        self.sock = sock  # socket UDP compartido del servidor
+        self.addr = addr  # direccion del cliente (ip, puerto)
         self.storage = storage  # carpeta de almacenamiento
 
     def handle(self, data):

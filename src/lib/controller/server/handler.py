@@ -1,15 +1,15 @@
 import queue
 import threading as th
 
-from model.rdt.router import RDTRouter
 from controller.server.session import SessionDispatcher
+from model.rdt.router import RDTRouter
 
 
 class ClientHandler:
     def __init__(self, sk, addr, store: str) -> None:
-        self.addr   = addr
+        self.addr = addr
         self._inbox = queue.Queue()
-        self._rdt   = RDTRouter(sk, addr, inbox=self._inbox)
+        self._rdt = RDTRouter(sk, addr, inbox=self._inbox)
         self._store = store
 
     def handle(self, data: bytes) -> None:

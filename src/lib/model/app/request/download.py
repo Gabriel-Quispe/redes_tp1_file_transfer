@@ -1,12 +1,13 @@
-from model.codigos.cod_error import CodError
-from model.codigos.cod_msj import CodMsj
-from model.codigos.cod_protocol import CodProtocol
+from pathlib import Path
+
 from model.app.messages.data_chunk import DataChunkMsg
 from model.app.messages.err import ErrMsg
 from model.app.messages.msg_type import peek_type
 from model.app.messages.request_download import RequestDownloadMsg
-from model.app.messages.response_ok import ResponseOkMsg
 from model.app.messages.response_filesize import ResponseFilesizeMsg
+from model.app.messages.response_ok import ResponseOkMsg
+from model.codigos.cod_msj import CodMsj
+from model.codigos.cod_protocol import CodProtocol
 from model.rdt.rdt import RDTProtocol
 
 
@@ -23,10 +24,10 @@ class RequestDownload:
         dest_path: str,
         protocol: CodProtocol = CodProtocol.STOP_AND_WAIT,
     ) -> None:
-        self._rdt       = rdt
-        self._filename  = filename
+        self._rdt = rdt
+        self._filename = filename
         self._dest_path = dest_path
-        self._protocol  = protocol
+        self._protocol = protocol
 
     def ejecutar(self) -> None:
         # 1. Enviar REQUEST
@@ -53,7 +54,7 @@ class RequestDownload:
         # 4. Recibir DATA en chunks
         chunks = []
         while True:
-            incoming  = self._rdt.recibir_mensaje()
+            incoming = self._rdt.recibir_mensaje()
             chunk_msg = DataChunkMsg.from_bytes(incoming)
             chunks.append(chunk_msg.payload)
             if not chunk_msg.more:
@@ -65,5 +66,5 @@ class RequestDownload:
         return None  # Extender si se necesita verificar disco
 
     def _guardar_archivo(self, data: bytes) -> None:
-        with open(self._dest_path, "wb") as f:
+        with Path(self._dest_path).open("wb") as f:
             f.write(data)

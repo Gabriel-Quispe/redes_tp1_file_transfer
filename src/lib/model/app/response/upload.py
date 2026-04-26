@@ -1,10 +1,12 @@
-from model.codigos.cod_error import CodError
-from model.codigos.cod_msj import CodMsj
+from pathlib import Path
+
 from model.app.messages.data_chunk import DataChunkMsg
 from model.app.messages.err import ErrMsg
 from model.app.messages.msg_type import peek_type
 from model.app.messages.request_upload import RequestUploadMsg
 from model.app.messages.response_ok import ResponseOkMsg
+from model.codigos.cod_error import CodError
+from model.codigos.cod_msj import CodMsj
 from model.rdt.rdt import RDTProtocol
 
 
@@ -15,7 +17,7 @@ class ResponseUpload:
     """
 
     def __init__(self, rdt: RDTProtocol, storage_dir: str) -> None:
-        self._rdt         = rdt
+        self._rdt = rdt
         self._storage_dir = storage_dir
 
     def ejecutar(self, first_msg: bytes) -> None:
@@ -48,7 +50,7 @@ class ResponseUpload:
         file_data = b"".join(chunks)
 
         # 4. Escribir y confirmar
-        dest_path   = f"{self._storage_dir}/{request.filename}"
+        dest_path = f"{self._storage_dir}/{request.filename}"
         write_error = self._escribir_archivo(dest_path, file_data, request.filesize)
 
         if write_error:
@@ -61,13 +63,11 @@ class ResponseUpload:
             return CodError.INVALID_FILENAME
         return None
 
-    def _escribir_archivo(
-        self, path: str, data: bytes, expected_size: int
-    ) -> CodError | None:
+    def _escribir_archivo(self, path: str, data: bytes, expected_size: int) -> CodError | None:
         if len(data) != expected_size:
             return CodError.FILESIZE_MISMATCH
         try:
-            with open(path, "wb") as f:
+            with Path(path).open("wb") as f:
                 f.write(data)
         except OSError:
             return CodError.WRITE_ERROR

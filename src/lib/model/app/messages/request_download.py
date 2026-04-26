@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from model.codigos.cod_msj import CodMsj
 from model.codigos.cod_op import CodOp
 from model.codigos.cod_protocol import CodProtocol
@@ -10,16 +11,14 @@ class RequestDownloadMsg:
     """
     Formato: [TYPE(1)][OP(1)][PROTOCOL(1)][FILENAME_LEN(1)][FILENAME(N)]
     """
+
     def __init__(self, protocol: CodProtocol, filename: str) -> None:
         self.protocol = protocol
         self.filename = filename
 
     def to_bytes(self) -> bytes:
         encoded = self._encode_filename(self.filename)
-        return (
-            bytes([CodMsj.REQUEST, CodOp.DOWNLOAD, self.protocol])
-            + encoded
-        )
+        return bytes([CodMsj.REQUEST, CodOp.DOWNLOAD, self.protocol]) + encoded
 
     @classmethod
     def from_bytes(cls, data: bytes) -> RequestDownloadMsg:
@@ -37,4 +36,4 @@ class RequestDownloadMsg:
     @staticmethod
     def _decode_filename(data: bytes, offset: int) -> str:
         length = data[offset]
-        return data[offset + 1: offset + 1 + length].decode("utf-8")
+        return data[offset + 1 : offset + 1 + length].decode("utf-8")

@@ -1,11 +1,11 @@
 import threading as th
 
-from view.cli.server import ServerCLI
-from view.params.server import ServerParams
 from controller.server.dispatcher import ClientDispatcher
 from controller.server.listener import ServerListener
 from controller.server.registry import ClientRegistry
 from controller.server.socket import ServerSocket
+from view.cli.server import ServerCLI
+from view.params.server import ServerParams
 
 
 class ServerCommand:

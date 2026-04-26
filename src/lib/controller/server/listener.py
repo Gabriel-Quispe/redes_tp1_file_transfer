@@ -1,8 +1,8 @@
 class ServerListener:
     def __init__(self, sk, dispatcher) -> None:
-        self._sk         = sk
+        self._sk = sk
         self._dispatcher = dispatcher
-        self._running    = False
+        self._running = False
 
     def start(self) -> None:
         self._running = True

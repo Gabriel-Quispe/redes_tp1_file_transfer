@@ -1,16 +1,23 @@
-from view.validations import FolderValidation, HostValidation, NameValidation, PortValidation, ProtocolValidation
 from pathlib import Path
+
+from view.validations import (
+    FolderValidation,
+    HostValidation,
+    NameValidation,
+    PortValidation,
+    ProtocolValidation,
+)
 
 
 class DownloadParams:
     def __init__(self, params) -> None:
-        self.host     = params.host
-        self.port     = params.port
-        self.dst      = params.dst
-        self.name     = params.name
+        self.host = params.host
+        self.port = params.port
+        self.dst = params.dst
+        self.name = params.name
         self.protocol = params.protocol
-        self.verbose  = params.verbose
-        self.quiet    = params.quiet
+        self.verbose = params.verbose
+        self.quiet = params.quiet
         HostValidation.validate(self.host)
         PortValidation.validate(self.port)
         FolderValidation.validate(self.dst)

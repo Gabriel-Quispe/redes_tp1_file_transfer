@@ -1,5 +1,6 @@
 import struct
 
+
 class Segment:
     HEADER_SIZE = 4
 

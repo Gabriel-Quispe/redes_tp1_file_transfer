@@ -2,7 +2,7 @@ from enum import IntEnum
 
 
 class CodProtocol(IntEnum):
-    STOP_AND_WAIT    = 0x01
+    STOP_AND_WAIT = 0x01
     SELECTIVE_REPEAT = 0x02
 
     @classmethod
@@ -13,5 +13,5 @@ class CodProtocol(IntEnum):
         }
         try:
             return mapping[name]
-        except KeyError:
-            raise ValueError(f"Protocolo desconocido: {name}")
+        except KeyError as err:
+            raise ValueError(f"Protocolo desconocido: {name}") from err

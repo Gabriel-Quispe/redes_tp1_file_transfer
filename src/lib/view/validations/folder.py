@@ -1,14 +1,18 @@
 import os
+from pathlib import Path
 
 
 class FolderValidation:
     @staticmethod
     def validate(path: str) -> None:
-        path = os.path.expanduser(path)
-        if os.path.exists(path) and not os.path.isdir(path):
+        p = Path(path).expanduser()
+
+        if p.exists() and not p.is_dir():
             raise ValueError("Path exists but is not a directory")
-        parent = os.path.dirname(os.path.abspath(path))
-        if not os.path.exists(parent):
+
+        parent = p.resolve().parent
+
+        if not parent.exists():
             raise ValueError("Parent directory does not exist")
         if not os.access(parent, os.W_OK):
             raise ValueError("No write permission in parent directory")

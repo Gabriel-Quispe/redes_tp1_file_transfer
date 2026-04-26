@@ -1,12 +1,12 @@
-import socket
+from pathlib import Path
 
-from model.codigos.cod_error import CodError
-from model.codigos.cod_msj import CodMsj
-from model.codigos.cod_protocol import CodProtocol
 from model.app.messages.data_chunk import DataChunkMsg
 from model.app.messages.err import ErrMsg
 from model.app.messages.msg_type import peek_type
 from model.app.messages.request_upload import RequestUploadMsg
+from model.codigos.cod_error import CodError
+from model.codigos.cod_msj import CodMsj
+from model.codigos.cod_protocol import CodProtocol
 from model.rdt.rdt import RDTProtocol
 
 
@@ -23,7 +23,7 @@ class RequestUpload:
         filename: str = None,
         protocol: CodProtocol = CodProtocol.STOP_AND_WAIT,
     ) -> None:
-        self._rdt      = rdt
+        self._rdt = rdt
         self._filepath = filepath
         self._filename = filename if filename is not None else filepath.split("/")[-1]
         self._protocol = protocol
@@ -59,7 +59,7 @@ class RequestUpload:
 
     def _leer_archivo(self) -> bytes:
         try:
-            with open(self._filepath, "rb") as f:
+            with Path(self._filepath).open("rb") as f:
                 return f.read()
         except FileNotFoundError as err:
             raise FileNotFoundError(f"File does not exist: {self._filepath}") from err
@@ -67,7 +67,7 @@ class RequestUpload:
     def _esperar_ok(self) -> None:
         try:
             data = self._rdt.recibir_mensaje()
-        except (TimeoutError, socket.timeout, OSError, RuntimeError) as e:
+        except (TimeoutError, OSError, RuntimeError) as e:
             raise RuntimeError("No se pudo entregar el mensaje") from e
 
         msg_type = peek_type(data)
