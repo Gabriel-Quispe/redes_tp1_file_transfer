@@ -1,4 +1,8 @@
+import queue
+
 from model.rdt.stop_and_wait.segment import Segment
+
+TIMEOUT = 0.5
 
 
 class UDPBase:
@@ -6,6 +10,8 @@ class UDPBase:
         self._sock = sock
         self._addr = addr
         self._inbox = inbox
+        if self._inbox is None:
+            self._sock.settimeout(TIMEOUT)
 
     def send_segment(self, segment: Segment):
         self._sock.sendto(segment.to_bytes(), self._addr)
@@ -17,5 +23,8 @@ class UDPBase:
 
     def _recv_raw(self):
         if self._inbox:
-            return self._inbox.get()
+            try:
+                return self._inbox.get(timeout=TIMEOUT)
+            except queue.Empty as e:
+                raise TimeoutError from e
         return self._sock.recvfrom(65535)

@@ -24,7 +24,10 @@ class StopAndWait(UDPBase):
 
     def recibir_mensaje(self) -> bytes:
         for _ in range(MAX_INTENTOS):
-            seg, addr = self.receive_segment()
+            try:
+                seg, addr = self.receive_segment()
+            except TimeoutError:
+                continue
             if not seg:
                 continue
 
