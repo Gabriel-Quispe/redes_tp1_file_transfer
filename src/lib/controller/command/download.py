@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import socket as s
 import sys
 
@@ -34,13 +33,3 @@ class DownloadCommand:
         except (ValueError, OSError, RuntimeError) as e:
             print(f"[ERROR] {e}", file=sys.stderr)
             sys.exit(1)
-=======
-from cli.download import DownloadCLI
-from params.download import DownloadParams
-
-
-class DownloadCommand:
-    def execute(left):
-        args = DownloadCLI().args()
-        params = DownloadParams(args)
->>>>>>> main
