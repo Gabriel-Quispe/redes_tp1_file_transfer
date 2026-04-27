@@ -70,15 +70,16 @@ class Segment:
             raise ValueError("Paquete inválido: Demasiado pequeño")
         
         header = data[:HEADER_SIZE]
-        payload = data[HEADER_SIZE:]
         opcode, seq_number, wsize, chksum, plen  = struct.unpack(HEADER_FORMAT, header)
         
+        payload = data[HEADER_SIZE:HEADER_SIZE+plen]
+        
         # CHECKSUM
+        payload = payload[:plen]
         header_chk = struct.pack(HEADER_FORMAT, opcode, seq_number, wsize, 0, plen)
         chksum_received = zlib.crc32(header_chk + payload) & 0xFFFFFFFF
         
         if (chksum_received & 0xFFFF) != chksum:
             raise ValueError("Datos corruptos")
 
-        payload = payload[:plen]
         return Segment(opcode, seq_number, wsize, payload)
