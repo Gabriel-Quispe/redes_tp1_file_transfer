@@ -20,14 +20,9 @@ class SelectiveRepeat(UDPBase):
         self._next_seq = 0
         self._sent_payloads: dict[int, bytes] = {}
 
-    # ------------------------------------------------------------------
-    # Interfaz pública
-    # ------------------------------------------------------------------
-
     def enviar_mensaje(self, data: bytes) -> None:
         seq = self._next_seq
 
-        # Esperar lugar en la ventana procesando ACKs mientras tanto
         intentos = 0
         while not self._window.in_window(seq):
             self._poll_acks()
@@ -36,16 +31,13 @@ class SelectiveRepeat(UDPBase):
             if intentos > MAX_INTENTOS:
                 raise RuntimeError(f"Ventana llena sin ACKs tras {MAX_INTENTOS} intentos")
 
-        # Guardar payload para posible retransmisión
         self._sent_payloads[seq] = data
 
-        # Enviar
         seg = Segment(seq, 0, data)
-        self._sock.sendto(seg.to_bytes(), self._addr)
+        self._sendto(seg.to_bytes(), self._addr)
         self._timers.start(seq)
         self._next_seq = (self._next_seq + 1) % MAX_SEQ
 
-        # Drenar ACKs disponibles sin bloquearse
         self._poll_acks()
         self._retransmitir_expirados()
         self._window.slide(self._acked)
@@ -61,8 +53,7 @@ class SelectiveRepeat(UDPBase):
             if not seg:
                 continue
 
-            ack_seg = Segment(0, seg.seq, b"")
-            self._sock.sendto(ack_seg.to_bytes(), addr)
+            self._sendto(Segment(0, seg.seq, b"").to_bytes(), addr)
 
             if (seg.seq - self._buffer.base) % MAX_SEQ < WINDOW_SIZE:
                 self._buffer.add(seg.seq, seg.payload)
@@ -70,12 +61,7 @@ class SelectiveRepeat(UDPBase):
                 if result is not None:
                     return result
 
-    # ------------------------------------------------------------------
-    # Privados
-    # ------------------------------------------------------------------
-
     def _poll_acks(self) -> None:
-        """Lee un ACK disponible sin bloquearse (timeout corto)."""
         try:
             data, _ = self._recv_raw()
         except (TimeoutError, OSError):
@@ -94,5 +80,5 @@ class SelectiveRepeat(UDPBase):
         for seq in self._timers.expired():
             if seq in self._sent_payloads:
                 seg = Segment(seq, 0, self._sent_payloads[seq])
-                self._sock.sendto(seg.to_bytes(), self._addr)
+                self._sendto(seg.to_bytes(), self._addr)
                 self._timers.start(seq)

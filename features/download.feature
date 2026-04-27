@@ -4,6 +4,10 @@ Característica: Descarga de archivos (Download)
   Antecedentes:
     Dado que el servidor está corriendo en "127.0.0.1" puerto 8000 con storage "/tmp/storage"
 
+  # -------------------------------------------------------------------------
+  # Stop & Wait
+  # -------------------------------------------------------------------------
+
   Escenario: Descarga exitosa de un archivo de texto
     Dado que el servidor tiene el archivo "prueba.txt" con contenido "hola mundo"
     Y que existe la carpeta de destino "/tmp/destino"
@@ -68,4 +72,35 @@ Característica: Descarga de archivos (Download)
     Dado que el servidor no está corriendo
     Y que existe la carpeta de destino "/tmp/destino"
     Cuando ejecuto download con host "127.0.0.1" puerto 8000 dst "/tmp/destino" nombre "prueba.txt" protocolo "stop_and_wait"
+    Entonces el comando falla con el error "No se pudo entregar el mensaje"
+
+  # -------------------------------------------------------------------------
+  # Selective Repeat
+  # -------------------------------------------------------------------------
+
+  Escenario: Descarga exitosa de un archivo de texto con selective_repeat
+    Dado que el servidor tiene el archivo "prueba_sr.txt" con contenido "hola selective repeat"
+    Y que existe la carpeta de destino "/tmp/destino"
+    Cuando ejecuto download con host "127.0.0.1" puerto 8000 dst "/tmp/destino" nombre "prueba_sr.txt" protocolo "selective_repeat"
+    Entonces el archivo "/tmp/destino/prueba_sr.txt" existe
+    Y el contenido del archivo descargado es "hola selective repeat"
+
+  Escenario: Descarga exitosa de un archivo binario con selective_repeat
+    Dado que el servidor tiene el archivo binario "imagen_sr.png" de 1 MB
+    Y que existe la carpeta de destino "/tmp/destino"
+    Cuando ejecuto download con host "127.0.0.1" puerto 8000 dst "/tmp/destino" nombre "imagen_sr.png" protocolo "selective_repeat"
+    Entonces el archivo "/tmp/destino/imagen_sr.png" existe
+    Y el archivo descargado es idéntico byte a byte al original en el servidor
+
+  Escenario: Descarga de 5 MB con selective_repeat en menos de 2 minutos
+    Dado que el servidor tiene el archivo binario "grande_sr.bin" de 5 MB
+    Y que existe la carpeta de destino "/tmp/destino"
+    Cuando ejecuto download con host "127.0.0.1" puerto 8000 dst "/tmp/destino" nombre "grande_sr.bin" protocolo "selective_repeat"
+    Entonces el download finaliza en menos de 120 segundos
+    Y el archivo descargado es idéntico byte a byte al original en el servidor
+
+  Escenario: Error al descargar con selective_repeat cuando el servidor no está disponible
+    Dado que el servidor no está corriendo
+    Y que existe la carpeta de destino "/tmp/destino"
+    Cuando ejecuto download con host "127.0.0.1" puerto 8000 dst "/tmp/destino" nombre "prueba_sr.txt" protocolo "selective_repeat"
     Entonces el comando falla con el error "No se pudo entregar el mensaje"

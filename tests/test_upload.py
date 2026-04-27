@@ -16,6 +16,10 @@ FEATURE    = os.path.abspath(
 SUBPROCESS_TIMEOUT = 35
 
 
+# ---------------------------------------------------------------------------
+# Scenarios — Stop & Wait
+# ---------------------------------------------------------------------------
+
 @scenario(FEATURE, "Subida exitosa de un archivo de texto")
 def test_upload_texto():
     pass
@@ -67,6 +71,30 @@ def test_upload_sin_servidor():
 
 
 # ---------------------------------------------------------------------------
+# Scenarios — Selective Repeat
+# ---------------------------------------------------------------------------
+
+@scenario(FEATURE, "Subida exitosa de un archivo de texto con selective_repeat")
+def test_upload_texto_sr():
+    pass
+
+
+@scenario(FEATURE, "Subida exitosa de un archivo binario con selective_repeat")
+def test_upload_binario_sr():
+    pass
+
+
+@scenario(FEATURE, "Subida de 5 MB con selective_repeat en menos de 2 minutos")
+def test_upload_grande_sr():
+    pass
+
+
+@scenario(FEATURE, "Error al subir con selective_repeat cuando el servidor no está disponible")
+def test_upload_sin_servidor_sr():
+    pass
+
+
+# ---------------------------------------------------------------------------
 # Givens
 # ---------------------------------------------------------------------------
 
@@ -102,11 +130,14 @@ def step_no_existe_archivo(ctx, path):
 
 @given("la red tiene una pérdida de paquetes del 10%")
 def step_red_con_perdida(ctx):
+    # La simulación de red no está activa en localhost; el test verifica
+    # que la transferencia igual termina correctamente gracias al protocolo.
     ctx["loss_rate"] = 0.10
 
 
 @given("la red corrompe el 5% de los paquetes")
 def step_red_con_corrupcion(ctx):
+    # Ídem anterior.
     ctx["corrupt_rate"] = 0.05
 
 

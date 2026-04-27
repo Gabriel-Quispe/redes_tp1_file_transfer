@@ -4,6 +4,10 @@ Característica: Subida de archivos (Upload)
   Antecedentes:
     Dado que el servidor está corriendo en "127.0.0.1" puerto 8000 con storage "/tmp/storage"
 
+  # -------------------------------------------------------------------------
+  # Stop & Wait
+  # -------------------------------------------------------------------------
+
   Escenario: Subida exitosa de un archivo de texto
     Dado que existe un archivo "/tmp/prueba.txt" con contenido "hola mundo"
     Cuando ejecuto upload con host "127.0.0.1" puerto 8000 src "/tmp/prueba.txt" nombre "prueba.txt" protocolo "stop_and_wait"
@@ -62,4 +66,33 @@ Característica: Subida de archivos (Upload)
     Dado que el servidor no está corriendo
     Y que existe un archivo "/tmp/prueba.txt" con contenido "hola mundo"
     Cuando ejecuto upload con host "127.0.0.1" puerto 8000 src "/tmp/prueba.txt" nombre "prueba.txt" protocolo "stop_and_wait"
+    Entonces el comando falla con el error "No se pudo entregar el mensaje"
+
+  # -------------------------------------------------------------------------
+  # Selective Repeat
+  # -------------------------------------------------------------------------
+
+  Escenario: Subida exitosa de un archivo de texto con selective_repeat
+    Dado que existe un archivo "/tmp/prueba_sr.txt" con contenido "hola selective repeat"
+    Cuando ejecuto upload con host "127.0.0.1" puerto 8000 src "/tmp/prueba_sr.txt" nombre "prueba_sr.txt" protocolo "selective_repeat"
+    Entonces el archivo "prueba_sr.txt" existe en el storage del servidor
+    Y el contenido del archivo en el servidor es "hola selective repeat"
+
+  Escenario: Subida exitosa de un archivo binario con selective_repeat
+    Dado que existe un archivo binario "/tmp/imagen_sr.png" de 1 MB
+    Cuando ejecuto upload con host "127.0.0.1" puerto 8000 src "/tmp/imagen_sr.png" nombre "imagen_sr.png" protocolo "selective_repeat"
+    Entonces el archivo "imagen_sr.png" existe en el storage del servidor
+    Y el archivo en el servidor es idéntico byte a byte al original
+
+  Escenario: Subida de 5 MB con selective_repeat en menos de 2 minutos
+    Dado que existe un archivo binario "/tmp/grande_sr.bin" de 5 MB
+    Cuando ejecuto upload con host "127.0.0.1" puerto 8000 src "/tmp/grande_sr.bin" nombre "grande_sr.bin" protocolo "selective_repeat"
+    Entonces el upload finaliza en menos de 120 segundos
+    Y el archivo "grande_sr.bin" existe en el storage del servidor
+    Y el archivo en el servidor es idéntico byte a byte al original
+
+  Escenario: Error al subir con selective_repeat cuando el servidor no está disponible
+    Dado que el servidor no está corriendo
+    Y que existe un archivo "/tmp/prueba_sr.txt" con contenido "hola mundo"
+    Cuando ejecuto upload con host "127.0.0.1" puerto 8000 src "/tmp/prueba_sr.txt" nombre "prueba_sr.txt" protocolo "selective_repeat"
     Entonces el comando falla con el error "No se pudo entregar el mensaje"

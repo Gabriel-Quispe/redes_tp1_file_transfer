@@ -14,12 +14,15 @@ class UDPBase:
             self._sock.settimeout(TIMEOUT)
 
     def send_segment(self, segment: Segment):
-        self._sock.sendto(segment.to_bytes(), self._addr)
+        self._sendto(segment.to_bytes(), self._addr)
 
     def receive_segment(self):
         data, addr = self._recv_raw()
         seg = Segment.from_bytes(data)
         return seg, addr
+
+    def _sendto(self, data: bytes, addr: tuple) -> None:
+        self._sock.sendto(data, addr)
 
     def _recv_raw(self):
         if self._inbox:

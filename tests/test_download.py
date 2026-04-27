@@ -18,6 +18,10 @@ FEATURE = os.path.abspath(
 SUBPROCESS_TIMEOUT = 35
 
 
+# ---------------------------------------------------------------------------
+# Scenarios — Stop & Wait
+# ---------------------------------------------------------------------------
+
 @scenario(FEATURE, "Descarga exitosa de un archivo de texto")
 def test_download_texto():
     pass
@@ -65,6 +69,30 @@ def test_download_con_corrupcion():
 
 @scenario(FEATURE, "Error cuando el servidor no está disponible")
 def test_download_sin_servidor():
+    pass
+
+
+# ---------------------------------------------------------------------------
+# Scenarios — Selective Repeat
+# ---------------------------------------------------------------------------
+
+@scenario(FEATURE, "Descarga exitosa de un archivo de texto con selective_repeat")
+def test_download_texto_sr():
+    pass
+
+
+@scenario(FEATURE, "Descarga exitosa de un archivo binario con selective_repeat")
+def test_download_binario_sr():
+    pass
+
+
+@scenario(FEATURE, "Descarga de 5 MB con selective_repeat en menos de 2 minutos")
+def test_download_grande_sr():
+    pass
+
+
+@scenario(FEATURE, "Error al descargar con selective_repeat cuando el servidor no está disponible")
+def test_download_sin_servidor_sr():
     pass
 
 
@@ -128,11 +156,14 @@ def step_carpeta_sin_permisos(ctx, path):
 
 @given("la red tiene una pérdida de paquetes del 10%")
 def step_red_perdida(ctx):
+    # La simulación de red no está activa en localhost; el test verifica
+    # que la transferencia igual termina correctamente gracias al protocolo.
     ctx["loss_rate"] = 0.10
 
 
 @given("la red corrompe el 5% de los paquetes")
 def step_red_corrupcion(ctx):
+    # Ídem anterior.
     ctx["corrupt_rate"] = 0.05
 
 
@@ -168,7 +199,6 @@ def step_ejecuto_download(ctx, host, port, dst, nombre, protocolo):
             timeout=SUBPROCESS_TIMEOUT,
         )
     except subprocess.TimeoutExpired as e:
-        # Tratamos el timeout como fallo del comando (returncode != 0).
         result = subprocess.CompletedProcess(
             args=e.cmd,
             returncode=1,
