@@ -9,9 +9,10 @@ OP_ACK            = 4
 OP_END            = 5  # Fin de transferencia
 OP_ERROR          = 6
 
-PROTOCOL_SW = 1 #Stop n Wait
+# Estos van en el primer paquete
+PROTOCOL_SW = 1 #Stop n Wait 
 PROTOCOL_SR  = 2 #Selective Repeat
 
 # Para el sv 
-#MAX_PAYLOAD_SIZE = 1400  
+MAX_PAYLOAD_SIZE = 1400  
 #TIMEOUT          = 0.5
