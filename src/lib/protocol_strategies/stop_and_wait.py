@@ -10,7 +10,10 @@ class StopAndWait(ProtocolStrategy):
     def set_window(self,tam:int):
         self.wsize = tam
     
-    def send_data(self, segment:Segment)-> Optional[Segment]:
+    # Por lo general max retry siempre es None, solo se usa en el cierre de la conexión
+    # para evitar el problema de los ejercitos
+    def send_data(self, segment:Segment, max_retry:Optional[int]=None)-> Optional[Segment]:
+        retries = 0
         while True:
             #acá fuerzo que se use este protocolo
             segment.seq_num=self.bit_sw
@@ -27,6 +30,10 @@ class StopAndWait(ProtocolStrategy):
                     return ack_pkt
             #acá el bucle sigue al igual que en el libro    
             except (socket.timeout, ValueError):
+                # la logica de reintentos solo se usa al finalizar la conexión
+                retries+=1
+                if max_retry is not None and retries>=max_retry:
+                    raise ConnectionError("Cerrando conexion ")
                 logger.debug(f"Retransmitiendo seq {segment.seq_num}...")
                 continue
     
