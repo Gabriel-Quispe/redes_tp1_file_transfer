@@ -18,7 +18,7 @@ class StopAndWait(ProtocolStrategy):
             self.socket.sendto(segment.pack(), self.address)
             try:
                 self.socket.settimeout(const.TIMEOUT)
-                raw_data, addr = self.socket.recvfrom(const.MAX_PAYLOAD_SIZE)
+                raw_data, addr = self.socket.recvfrom(self.receive_tam)
                 ack_pkt = Segment.unpack(raw_data)
 
                 if ack_pkt.opcode == const.OP_ACK and ack_pkt.seq_num == segment.seq_num:
@@ -35,7 +35,7 @@ class StopAndWait(ProtocolStrategy):
         self.socket.settimeout(None)
         while True:
             try:
-                raw_data, addr = self.socket.recvfrom(const.MAX_PAYLOAD_SIZE)
+                raw_data, addr = self.socket.recvfrom(self.receive_tam)
                 # por las dudas
                 if addr != self.address: continue 
                 
@@ -54,7 +54,7 @@ class StopAndWait(ProtocolStrategy):
                 else:
                     logger.debug(f"Seq {segment.seq_num} DUPLICADO.")
 
-            except ValueError:
+            except ValueError as e:
                 # En snw se espera el timeout 
-                logger.debug("Segmento CORRUPTO")
+                logger.debug(f"Error {e}")
                 continue
