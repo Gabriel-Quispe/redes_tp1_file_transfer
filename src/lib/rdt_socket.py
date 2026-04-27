@@ -1,28 +1,28 @@
 import struct
 import socket
-import const
-from segment import Segment
-from protocol_strategies.selective_repeat import *
-from protocol_strategies.stop_and_wait import *
-from protocol_strategies.protocol_strategy import *
+import lib.const as const
+from lib.segment import Segment
+from lib.protocol_strategies.selective_repeat import *
+from lib.protocol_strategies.stop_and_wait import *
+from lib.protocol_strategies.protocol_strategy import *
 from lib.logger import logger
 # recibe una direccion y una strategy (Stop n Wait o Selective Repeat)
 class FRDTSocket:
     def __init__(self,address,protocol_strategy):
         self.next_seq = 1
         self.protocol_id = protocol_strategy
-        self.adress = address
+        self.address = address
         self.socket:socket.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.wsize=const.SV_MAX_WIN
         self.p_strategy:ProtocolStrategy=None
         match protocol_strategy:
             case const.PROTOCOL_SR:
-                self.p_strategy = SelectiveRepeat(self.adress,self.socket)
+                self.p_strategy = SelectiveRepeat(self.address,self.socket)
             case const.PROTOCOL_SW:
-                self.p_strategy = StopAndWait(self.adress,self.socket)
+                self.p_strategy = StopAndWait(self.address,self.socket)
             case _:
                 raise ValueError("Protocolo no soportado!")
-        logger.debug(f"Iniciando socket para {self.adress} con protocolo {self.p_strategy.__class__}")
+        logger.debug(f"Iniciando socket para {self.address} con protocolo {self.p_strategy.__class__}")
     #hanshake
     def connect(self,op_start, file_name=None, size=0):
         # lado del cliente
@@ -43,13 +43,21 @@ class FRDTSocket:
             self.wsize = server_response_segment.wsize
             self.p_strategy.set_window(self.wsize)
             logger.info(f"Conexion establecida!, ventana receptora {self.wsize}")
+            return server_response_segment
         else:#somos el servidor
-            logger.debug(f"Enviando confirmacion al cliente")
-            self.wsize = const.SV_MAX_WIN//const.SV_MAX_CLIENTS
-            response_segment = Segment(const.OP_ACK,0,self.wsize,b"")            
-            # server envia sin delegar. el cliente seguirá intentando si falla
-            self.socket.sendto(response_segment.pack(),self.adress)
-            self.p_strategy.set_window(self.wsize)
+            logger.debug("Servidor esperando paquete inicial...")
+            raw_data, addr = self.socket.recvfrom(const.MAX_PAYLOAD_SIZE)
+            
+            self.address = addr
+            self.p_strategy.address = addr 
+            client_request = Segment.unpack(raw_data)
+            logger.debug(f"Pedido recibido de {addr}. Enviando confirmacion...")
+            self.wsize = const.SV_MAX_WIN // const.SV_MAX_CLIENTS
+            response_segment = Segment(const.OP_ACK, 0, self.wsize, b"")            
+            self.socket.sendto(response_segment.pack(), self.address)
+            
+            self.p_strategy.set_window(self.wsize)            
+            return client_request
     
     def send(self,data):
         size = const.MAX_PAYLOAD_SIZE
