@@ -1,6 +1,6 @@
 import logging
 
-def configure_logger(verbose, quiet):
+def configure_logger(verbose=False, quiet=True):
     if quiet:
         level = logging.ERROR
     elif verbose:
