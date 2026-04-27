@@ -1,0 +1,54 @@
+#!/bin/python
+import os
+import time
+from lib.rdt_socket import FRDTSocket
+import lib.const as const
+from lib.logger import logger,configure_logger
+
+def run_test_upload():
+    configure_logger(True,False)
+    # 1. Dirección del servidor (h1 en Mininet)
+    server_addr = ("10.0.0.2", 65535)
+    
+    # 2. Archivo a subir
+    # Asegúrate de que este archivo exista en la carpeta del cliente
+    file_path = "test.jpg" 
+    
+    if not os.path.exists(file_path):
+        logger.error(f"El archivo {file_path} no existe. Creando uno de prueba...")
+        with open(file_path, "wb") as f:
+            f.write(os.urandom(1024 * 1024)) # 1MB de basura aleatoria
+
+    # 3. Instanciar socket con la estrategia Stop & Wait
+    sock = FRDTSocket(server_addr, const.PROTOCOL_SW)
+    
+    logger.info(f"Iniciando subida de {file_path} a {server_addr}...")
+    start_time = time.time()
+
+    try:
+        # 4. CONNECT (Modo Cliente):
+        # Envía el paquete START_UPLOAD con nombre y tamaño.
+        # Espera el ACK del servidor.
+        file_name = os.path.basename(file_path)
+        file_size = os.path.getsize(file_path)
+        
+        sock.connect(const.OP_START_UPLOAD, file_name, file_size)
+        
+        # 5. ENVIAR DATOS:
+        # El método send() se encarga de fragmentar y usar la estrategia RDT
+        with open(file_path, "rb") as f:
+            data = f.read()
+            sock.send(data)
+            
+        logger.info("Envío de datos finalizado.")
+
+    except Exception as e:
+        logger.error(f"Error durante el upload: {e}")
+    finally:
+        # 6. CERRAR: Envía el OP_END y cierra el socket UDP
+        sock.close()
+        end_time = time.time()
+        logger.info(f"Tiempo total: {end_time - start_time:.2f} segundos.")
+
+if __name__ == "__main__":
+    run_test_upload()

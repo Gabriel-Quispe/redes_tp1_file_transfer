@@ -76,8 +76,21 @@ class FRDTSocket:
         payload = self.p_strategy.receive_data()
         return payload
     
+    #def close(self):
+    #    logger.info(f"cerrando conexion")
+    #    finack = Segment(const.OP_END, self.next_seq, 0, b"")
+    #    self.p_strategy.do_handshake(finack) # es un handshake de fin
+    #    self.socket.close()
     def close(self):
         logger.info(f"cerrando conexion")
-        finack = Segment(const.OP_END, self.next_seq, 0, b"")
-        self.p_strategy.do_handshake(finack) # es un handshake de fin
-        self.socket.close()
+        fin_segment = Segment(const.OP_END, self.p_strategy.next_seq, 0, b"")
+        # No necesito que sea confiable el close! (se quedan infinitamente esperando el ack del ack
+        # como dijeron en clase con el ejemplo de los generales)
+        self.socket.settimeout(const.TIMEOUT)
+        try:
+            self.p_strategy.send_data(fin_segment,3)
+        except Exception as e:
+            logger.info("Cliente cerró su conexion")
+        finally:
+            self.socket.close()
+            logger.info("Server cerró su conexión")

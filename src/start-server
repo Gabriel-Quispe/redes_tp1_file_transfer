@@ -1,0 +1,60 @@
+#!/bin/python
+import os
+import lib.const as const
+from lib.rdt_socket import FRDTSocket
+from lib.logger import logger,configure_logger
+
+def run_test_server():
+    configure_logger(verbose=True, quiet=False)
+    # 1. Configuración de dirección
+    # Cambié a 10.0.0.1 asumiendo que este es h1. 
+    # El puerto es el límite superior de puertos válidos (65535).
+    server_addr = ("10.0.0.2", 65535) 
+    
+    sock = FRDTSocket(server_addr, const.PROTOCOL_SW)
+    sock.socket.bind(server_addr)
+    
+    logger.info(f"Servidor listo en {server_addr[0]}:{server_addr[1]}. Esperando cliente...")
+    
+    # 4. Handshake inicial
+    request_segment = sock.connect(None) 
+    
+    # 5. LÓGICA DE APLICACIÓN
+    if request_segment.opcode == const.OP_START_UPLOAD:
+        # --- SOLUCIÓN AL ERROR DE CARPETA ---
+        storage_dir = "storage"
+        if not os.path.exists(storage_dir):
+            logger.info(f"Creando carpeta {storage_dir}...")
+            os.makedirs(storage_dir)
+        # ------------------------------------
+
+        output_filename = os.path.join(storage_dir, "recibido_en_server.jpg")
+        logger.info(f"Atendiendo UPLOAD. Guardando en: {output_filename}")
+        
+        try:
+            with open(output_filename, "wb") as f:
+                while True:
+                    payload = sock.recv()
+                    if payload is None: # Llegó OP_END
+                        break
+                    f.write(payload)
+            logger.info("Transferencia de subida finalizada con éxito.")
+        except Exception as e:
+            logger.error(f"Error escribiendo el archivo: {e}")
+
+    elif request_segment.opcode == const.OP_START_DOWNLOAD:
+        # Para el download también asegurate de que el archivo exista
+        file_to_send = "storage/test_5mb.jpg"
+        if os.path.exists(file_to_send):
+            logger.info(f"Enviando {file_to_send}...")
+            with open(file_to_send, "rb") as f:
+                data = f.read()
+                sock.send(data)
+            logger.info("Transferencia de bajada finalizada.")
+        else:
+            logger.error(f"El archivo solicitado {file_to_send} no existe en el server.")
+
+    sock.close()
+
+if __name__ == "__main__":
+    run_test_server()
