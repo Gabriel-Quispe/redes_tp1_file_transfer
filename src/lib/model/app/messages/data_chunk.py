@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from model.codigos.cod_msj import CodMsj
 
-MAX_CHUNK_BYTES = 32768  # 32 KB
+MAX_CHUNK_BYTES = 1500
 
 
 class DataChunkMsg:
