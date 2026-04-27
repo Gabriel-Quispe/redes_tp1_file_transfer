@@ -1,60 +1,72 @@
 #!/bin/python
 import os
+import socket
+import struct
 import lib.const as const
 from lib.rdt_socket import FRDTSocket
 from lib.logger import logger,configure_logger
+import threading
+from lib.segment import Segment
+sv_port=const.PORT
+buff_size=4096
 
-def run_test_server():
-    configure_logger(verbose=True, quiet=False)
-    # 1. Configuración de dirección
-    # Cambié a 10.0.0.1 asumiendo que este es h1. 
-    # El puerto es el límite superior de puertos válidos (65535).
-    server_addr = ("10.0.0.2", 65535) 
-    
-    sock = FRDTSocket(server_addr, const.PROTOCOL_SW)
-    sock.socket.bind(server_addr)
-    
-    logger.info(f"Servidor listo en {server_addr[0]}:{server_addr[1]}. Esperando cliente...")
-    
-    # 4. Handshake inicial
-    request_segment = sock.connect(None) 
-    
-    # 5. LÓGICA DE APLICACIÓN
-    if request_segment.opcode == const.OP_START_UPLOAD:
-        # --- SOLUCIÓN AL ERROR DE CARPETA ---
-        storage_dir = "storage"
-        if not os.path.exists(storage_dir):
-            logger.info(f"Creando carpeta {storage_dir}...")
-            os.makedirs(storage_dir)
-        # ------------------------------------
 
-        output_filename = os.path.join(storage_dir, "recibido_en_server.jpg")
-        logger.info(f"Atendiendo UPLOAD. Guardando en: {output_filename}")
+# esto siempre se ejecuta en un nuevo hilo
+def welcome_client(address,rdt_segment,drive_dir):
+    rdt_sock = None
+    try:
+        #extraigo los metadatos (applayer)
+        metadata_size = struct.calcsize("!BQ")
+        protocol_id, file_size = struct.unpack("!BQ", segment.payload[:metadata_size])
         
-        try:
-            with open(output_filename, "wb") as f:
-                while True:
-                    payload = sock.recv()
-                    if payload is None: # Llegó OP_END
-                        break
-                    f.write(payload)
-            logger.info("Transferencia de subida finalizada con éxito.")
-        except Exception as e:
-            logger.error(f"Error escribiendo el archivo: {e}")
+        file_name = segment.payload[metadata_size:].decode()        
+        logger.info(f"Cliente {address} solicita {segment.opcode} de {file_name} ({file_size} bytes) usando protocolo {protocol_id}")
+        
+        rdt_sock = FRDTSocket(address, protocol_id)
+        # accept_connection envia el ack del handshake con el cliente
+        rdt_sock.accept_connection(rdt_segment)
+        
+    except Exception as e:
+        print(e)
 
-    elif request_segment.opcode == const.OP_START_DOWNLOAD:
-        # Para el download también asegurate de que el archivo exista
-        file_to_send = "storage/test_5mb.jpg"
-        if os.path.exists(file_to_send):
-            logger.info(f"Enviando {file_to_send}...")
-            with open(file_to_send, "rb") as f:
-                data = f.read()
-                sock.send(data)
-            logger.info("Transferencia de bajada finalizada.")
-        else:
-            logger.error(f"El archivo solicitado {file_to_send} no existe en el server.")
-
-    sock.close()
-
+def download_to(rdt_sock:FRDTSocket,file_path:str):
+    if not os.path.exists(file_path):
+        logger.error(f"El archivo {file_path} no existe en el server")
+        raise ValueError("Archivo inexistente!")
+    logger.info(f"Descargando {file_path}")
+    # implementar download
+    
+def upload_from(rdt_sock:FRDTSocket,file_path:str,size):
+    logger.info(f"Cargando Archivo en {file_path}")
+    with open(file_path, "wb") as f:
+        bytes_received = 0
+        while bytes_received < size:
+            chunk = rdt_sock.recv()
+            if chunk is None: break
+            f.write(chunk)
+            bytes_received += len(chunk)
+    
 if __name__ == "__main__":
-    run_test_server()
+    os.umask(0)
+    configure_logger(True, False)
+    
+    # Socket Maestro: El unico socket que hace bind al puerto 65535, y no es confiable
+    welcome_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    welcome_socket.bind(("10.0.0.2", sv_port))
+    while True:
+        raw_data, addr = welcome_socket.recvfrom(buff_size)
+        try:
+            segment = Segment.unpack(raw_data)            
+            # Si aparece un nuevo request de conexión
+            if segment.opcode in [const.OP_START_UPLOAD, const.OP_START_DOWNLOAD]:                
+                #creo un nuevo hilo para el cliente
+                t = threading.Thread(
+                    target=welcome_client, 
+                    args=(addr, segment, "storage")
+                )
+                t.daemon = True # Para cerrar el sv aunque haya hilos
+                t.start()
+            else:
+                logger.debug(f"Paquete ignorado {addr} con opcode {segment.opcode}")                
+        except Exception as e:
+            logger.error(f"Error procesando paquete en el server master: {e}")
