@@ -2,9 +2,10 @@
 import os
 import socket
 import struct
+import time
 import lib.const as const
 from lib.rdt_socket import FRDTSocket
-from lib.logger import logger,configure_logger
+from lib.logger import logger,configure_logger,show_stats
 import threading
 from lib.segment import Segment
 sv_port=const.PORT
@@ -12,47 +13,80 @@ buff_size=4096
 
 
 # esto siempre se ejecuta en un nuevo hilo
-def welcome_client(address,rdt_segment,drive_dir):
+def welcome_client(address,rdt_segment:Segment,drive_dir):
     rdt_sock = None
     try:
         #extraigo los metadatos (applayer)
         metadata_size = struct.calcsize("!BQ")
-        protocol_id, file_size = struct.unpack("!BQ", segment.payload[:metadata_size])
+        protocol_id, file_size = struct.unpack("!BQ", rdt_segment.payload[:metadata_size])
         
-        file_name = segment.payload[metadata_size:].decode()        
-        logger.info(f"Cliente {address} solicita {segment.opcode} de {file_name} ({file_size} bytes) usando protocolo {protocol_id}")
+        file_name = rdt_segment.payload[metadata_size:].decode()
+        file_path = os.path.join(drive_dir,file_name)
+        logger.info(f"Cliente {address} solicita {rdt_segment.opcode} de {file_name} ({file_size} bytes) usando protocolo {protocol_id}")
         
         rdt_sock = FRDTSocket(address, protocol_id)
         # accept_connection envia el ack del handshake con el cliente
         rdt_sock.accept_connection(rdt_segment)
         
+        if rdt_segment.opcode == const.OP_START_DOWNLOAD:
+            download_to(rdt_sock,file_path)
+        elif rdt_segment.opcode == const.OP_START_UPLOAD:
+            upload_from(rdt_sock,file_path,file_size)
+        else:
+            logger.error(f"Protocolo {rdt_segment.opcode} no soportado")        
     except Exception as e:
-        print(e)
+        logger.error(f"Error con el cliente {address}: {e}")
+    finally:
+        if rdt_sock: rdt_sock.close()
 
-def download_to(rdt_sock:FRDTSocket,file_path:str):
-    if not os.path.exists(file_path):
-        logger.error(f"El archivo {file_path} no existe en el server")
-        raise ValueError("Archivo inexistente!")
-    logger.info(f"Descargando {file_path}")
-    # implementar download
-    
 def upload_from(rdt_sock:FRDTSocket,file_path:str,size):
     logger.info(f"Cargando Archivo en {file_path}")
     with open(file_path, "wb") as f:
         bytes_received = 0
+        start_time = time.time()
+        final_time = start_time
         while bytes_received < size:
-            chunk = rdt_sock.recv()
-            if chunk is None: break
+            opcode,chunk = rdt_sock.recv()
+            if opcode == const.OP_ERROR:
+                err_msg=chunk.decode()
+                logger.error(f"Error recibido: {err_msg}")
+                raise RuntimeError(f"Error remoto: {err_msg}")
+            if opcode==const.OP_END:
+                logger.info(f"Fin de Transmisión {bytes_received}")
+                break
             f.write(chunk)
             bytes_received += len(chunk)
+    final_time = time.time() - start_time
+    if bytes_received>=size:
+        # esto evita que el hilo muera antes que el cliente se desconecte
+        rdt_sock.recv()
+    logger.info(f"Transmisión exitosa {bytes_received}")
+    show_stats(final_time,size)
+            
+def download_to(rdt_sock:FRDTSocket,file_path:str):
+    if not os.path.exists(file_path):
+        logger.error(f"El archivo {file_path} no existe en el server")
+        err_segment = Segment(const.OP_ERROR,0,0,b"FILE_NOT_FOUND")        
+        try:
+            rdt_sock.p_strategy.send_data(err_segment,3)
+        except Exception:
+            pass
+        return
+    logger.info(f"Descargando {file_path}")
+    # implementar download
+    
     
 if __name__ == "__main__":
-    os.umask(0)
+    os.umask(0) # para ver al archivo cargandose en vscode (esto evita que se bloquee)
     configure_logger(True, False)
-    
+    drive_dir = "storage"
+    if not os.path.exists(drive_dir):
+        os.makedirs(drive_dir)
     # Socket Maestro: El unico socket que hace bind al puerto 65535, y no es confiable
     welcome_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     welcome_socket.bind(("10.0.0.2", sv_port))
+    logger.info(f"Servidor iniciado!")
+    logger.info(f"Esperando conexiones en el puerto{sv_port}")
     while True:
         raw_data, addr = welcome_socket.recvfrom(buff_size)
         try:
@@ -62,7 +96,7 @@ if __name__ == "__main__":
                 #creo un nuevo hilo para el cliente
                 t = threading.Thread(
                     target=welcome_client, 
-                    args=(addr, segment, "storage")
+                    args=(addr, segment, drive_dir)
                 )
                 t.daemon = True # Para cerrar el sv aunque haya hilos
                 t.start()
