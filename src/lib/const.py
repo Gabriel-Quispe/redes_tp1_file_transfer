@@ -15,4 +15,5 @@ PROTOCOL_SR  = 2 #Selective Repeat
 
 # Para el sv 
 MAX_PAYLOAD_SIZE = 1400  
-TIMEOUT          = 0.5
+TIMEOUT          = 0.1
+PORT=65535
