@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from .protocol_strategy import *
 from lib.segment import *
 from lib.logger import logger
@@ -5,10 +7,10 @@ import socket
 class StopAndWait(ProtocolStrategy):
     def __init__(self, address, socket):
         super().__init__(address, socket)
-        # ignoro el seqnumber, uso 0 y 1!
+        self.wsize = 1
         self.bit_sw = 1
     def set_window(self,tam:int):
-        self.wsize = tam
+        return
     
     # Por lo general max retry siempre es None, solo se usa en el cierre de la conexión
     # para evitar el problema de los ejercitos
@@ -37,7 +39,7 @@ class StopAndWait(ProtocolStrategy):
                 logger.debug(f"Retransmitiendo seq {segment.seq_num}...")
                 continue
     
-    def receive_data(self)-> Optional[bytes]:
+    def receive_data(self) -> Tuple[int, Optional[bytes]]:
         # acá evito que se muera el receptor(cliente y servidor puede ser receptores)
         self.socket.settimeout(None)
         while True:
@@ -52,12 +54,16 @@ class StopAndWait(ProtocolStrategy):
                 ack_segment = Segment(const.OP_ACK, segment.seq_num, self.wsize, b"")
                 self.socket.sendto(ack_segment.pack(), self.address)
                 if segment.opcode == const.OP_END:
-                    logger.info("Fin de transmisión recibido.")
-                    return None 
-                
+                    logger.info("Fin de transmisión recibido.")                    
+                    return (const.OP_END,None)
+                if segment.opcode == const.OP_ERROR:
+                    return (const.OP_ERROR,segment.payload)
                 if segment.seq_num == self.bit_sw:               
                     self.bit_sw = 1- self.bit_sw
-                    return segment.payload
+                    if segment.opcode == const.OP_DATA:
+                        return (const.OP_DATA,segment.payload)
+                    logger.debug(f"Paquete de operacion {segment.opcode}")
+                    continue
                 else:
                     logger.debug(f"Seq {segment.seq_num} DUPLICADO.")
 
