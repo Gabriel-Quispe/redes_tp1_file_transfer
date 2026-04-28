@@ -45,8 +45,9 @@ class FRDTSocket:
             logger.error("El servidor no respondió al handshake del cliente")
             raise ConnectionError("Error: Timeout en handshake")                    
         # Actualizamos ventana según lo que el servidor nos permitió
-        self.wsize = response_segment.wsize
-        self.p_strategy.set_window(self.wsize)        
+        self.p_strategy.set_window(response_segment.wsize)
+        self.wsize = self.p_strategy.wsize
+        
         logger.info(f"Conexión establecida. Ventana del servidor: {self.wsize}")
         return response_segment
     
