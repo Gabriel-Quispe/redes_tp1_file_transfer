@@ -22,6 +22,8 @@ class FRDTSocket:
                 self.p_strategy = StopAndWait(self.address,self.socket)
             case _:
                 raise ValueError("Protocolo no soportado!")
+        #actualizo la ventana segun protocolo
+        self.wsize = self.p_strategy.wsize
         logger.debug(f"Iniciando socket para {self.address} con protocolo {self.p_strategy.__class__}")
     
     # este handshake viene del lado del cliente.
@@ -79,11 +81,7 @@ class FRDTSocket:
         logger.debug(f"Recibiendo paquete")         
         return self.p_strategy.receive_data()
     
-    #def close(self):
-    #    logger.info(f"cerrando conexion")
-    #    finack = Segment(const.OP_END, self.next_seq, 0, b"")
-    #    self.p_strategy.do_handshake(finack) # es un handshake de fin
-    #    self.socket.close()
+
     def close(self):
         logger.info(f"cerrando conexion")
         fin_segment = Segment(const.OP_END, self.p_strategy.next_seq, 1, b"")
