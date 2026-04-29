@@ -12,7 +12,7 @@ class ProtocolStrategy:
         self.wsize=const.SV_MAX_WIN
     def set_window(self,tam:int)->None:
         pass
-    def send_data(self, segment:Segment, max_retry:int=0)-> Optional[Segment]:
+    def send_data(self, segment:Segment, max_retry:int=10)-> Optional[Segment]:
         pass
     def do_handshake(self,segment: Segment)-> Optional[Segment]:        
         
