@@ -9,7 +9,7 @@ class FRDTClient:
         self.parser = argparse.ArgumentParser(description=description)
         self._add_common_arguments()
         self.args = None
-        self.rdt_sock = None
+        self.rdt_sock:FRDTSocket = None
 
     def _add_common_arguments(self):
         self.parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity")

@@ -16,24 +16,32 @@ buff_size=4096
 def welcome_client(address,rdt_segment:Segment,drive_dir):
     rdt_sock = None
     try:
-        #extraigo los metadatos (applayer)
-        metadata_size = struct.calcsize("!BQ")
-        protocol_id, file_size = struct.unpack("!BQ", rdt_segment.payload[:metadata_size])
-        
-        file_name = rdt_segment.payload[metadata_size:].decode()
-        file_path = os.path.join(drive_dir,file_name)
-        logger.info(f"Cliente {address} solicita {rdt_segment.opcode} de {file_name} ({file_size} bytes) usando protocolo {protocol_id}")
-        
-        rdt_sock = FRDTSocket(address, protocol_id)
-        # accept_connection envia el ack del handshake con el cliente
-        rdt_sock.accept_connection(rdt_segment)
+        #extraigo los metadatos (applayer)        
+        protocol_op = struct.unpack("!B", rdt_segment.payload[:1])[0]
+        rdt_sock = FRDTSocket(address,protocol_op)
+        offset=0
+        if rdt_segment.opcode == const.OP_START_UPLOAD:
+            offset = struct.calcsize("!BQ")
+        else:
+            offset = 1
+        file_name = rdt_segment.payload[offset:].decode()        
+        file_path = os.path.join(drive_dir, file_name)
         
         if rdt_segment.opcode == const.OP_START_DOWNLOAD:
+            if not os.path.exists(file_path):
+                logger.error(f"No existe el archivo {file_name} en el servidor!")
+                rdt_sock.accept_connection(const.OP_ERROR,b"FILE_NOT_FOUND")
+                return
+            size= os.path.getsize(file_path)
+            rdt_sock.accept_connection(const.OP_ACK,struct.pack("!Q",size))
             download_to(rdt_sock,file_path)
         elif rdt_segment.opcode == const.OP_START_UPLOAD:
+            # aca el filesize lo otorga el cliente justo despues del primer byte
+            file_size= struct.unpack("!Q",rdt_segment.payload[1:9])[0]
+            rdt_sock.accept_connection(const.OP_ACK)
             upload_from(rdt_sock,file_path,file_size)
         else:
-            logger.error(f"Protocolo {rdt_segment.opcode} no soportado")        
+            logger.error(f"Operación {rdt_segment.opcode} no soportada")
     except Exception as e:
         logger.error(f"Error con el cliente {address}: {e}")
     finally:
