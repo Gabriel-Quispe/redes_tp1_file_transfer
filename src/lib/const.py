@@ -14,6 +14,6 @@ PROTOCOL_SW = 1 #Stop n Wait
 PROTOCOL_SR  = 2 #Selective Repeat
 
 # Para el sv 
-MAX_PAYLOAD_SIZE = 1400  
+MAX_PAYLOAD_SIZE = 1442
 TIMEOUT          = 0.055
 PORT=65535
