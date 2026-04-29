@@ -6,7 +6,7 @@ import time
 class FRDT_Upload(FRDTClient):
     def __init__(self):
         super().__init__("File Reliable Data Transfer")
-        self.parser.add_argument("-s", "--src",required=True,help="path to source file")
+        self.parser.add_argument("-s", "--src",required=True,help="source file path")
     
     def run(self):
         self.setup()
