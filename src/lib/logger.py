@@ -7,7 +7,7 @@ def show_stats(final_time, size):
     logger.info(f"Estadísticas")
     logger.info(f"Tiempo: {final_time:.2f} segundos")
     logger.info(f"Tamaño: {size / 1024:.2f} KB")
-    logger.info(f"Throughput promedio: {throughput:.2f} bps")
+    logger.info(f"Throughput promedio: {throughput:.2f} Bps")
 def configure_logger(verbose=False, quiet=True):
     if quiet:
         level = logging.ERROR

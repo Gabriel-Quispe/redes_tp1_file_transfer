@@ -1,5 +1,6 @@
 import zlib
 import struct
+from lib import const
 
 # En struct:        Bytes
 # x= 1byte          1
@@ -42,7 +43,7 @@ import struct
 #   |            Checksum           |         Payload Length        |
 #
 #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-HEADER_FORMAT = "!B3xIIHH"
+HEADER_FORMAT = const.HEADER_FORMAT
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)  # 16 BYTES TOTALES
 
 class Segment:
