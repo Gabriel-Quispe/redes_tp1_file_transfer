@@ -52,18 +52,18 @@ class FRDTSocket:
         return response_segment
     
     
-    # este metodo se utiliza para finalizar el handshake inicial, dado que el cliente usa un rdt, 
-    # intentara conectarse al servidor hasta lograrlo, el servidor sin embargo, no necesita reintentar nada
-    # todavia
-    # accept_connection no lee nada de ningun socket, se asume que el server lo leyo
-    def accept_connection(self, initial_segment):
+    # este metodo se utiliza para finalizar el handshake inicial.
+    # intentara conectarse al servidor varias veces, el servidor sin embargo, no necesita reintentar nada
+    
+    def accept_connection(self, opcode, payload:bytes=b"")->Segment:
         self.wsize = const.SV_MAX_WIN // const.SV_MAX_CLIENTS        
-        #respuesta ack al start
-        response_segment = Segment(const.OP_ACK, 0, self.wsize, b"")        
-        logger.debug(f"Enviando ACK inicial a {self.address} de un nuevo puerto")
+        # 
+        response_segment = Segment(opcode, 0, self.wsize, payload)
+        logger.debug(f"Enviando respuesta inicial {opcode} a {self.address}")
         self.socket.sendto(response_segment.pack(), self.address)
-        self.p_strategy.set_window(self.wsize)        
-        return initial_segment
+        if opcode==const.OP_ACK:
+            self.p_strategy.set_window(self.wsize)
+        return response_segment
     
     
     def send(self,data):
