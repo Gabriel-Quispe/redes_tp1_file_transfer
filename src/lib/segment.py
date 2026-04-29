@@ -65,7 +65,7 @@ class Segment:
     # Static para usarlo sin instanciar esta clase
     @staticmethod
     def unpack(data):
-        """Fábrica que convierte los datos en un paquete"""
+        """Fábrica que convierte el paquete entero en un segmento"""
         if len(data) < HEADER_SIZE:
             raise ValueError("Paquete inválido: Demasiado pequeño")
         
