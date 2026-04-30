@@ -1,0 +1,23 @@
+#!/bin/python
+import struct
+import time
+from lib.const import *
+from lib.rdt_client import *
+
+class FDRT_Download(FRDTClient):
+    def __init__(self, description):
+        super().__init__("File Reliable Data Transfer (Download)")
+        self.parser.add_argument("-d", "--dst",required=True,help="destination file path")
+    
+    def run(self):
+        self.setup()
+        
+        # en el payload existe el protocolo + nombre del archivo
+        # 1 byte para el protocolo y todo lo demas es el nombre
+        payload= struct.pack("!B",self.args.protocol) + self.args.name.encode()
+        try:
+            # envio el payload como inicio del handshake
+            # espero la respuesta del servidor (con el tamaño del archivo)
+            sv_response = self.rdt_sock.connect(const.OP_START_DOWNLOAD,payload)
+            
+            
