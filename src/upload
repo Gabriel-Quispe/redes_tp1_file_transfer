@@ -17,7 +17,10 @@ class FRDT_Upload(FRDTClient):
         payload = struct.pack("!BQ", self.args.protocol, size) + self.args.name.encode()
         try:
             # Handshake
-            self.rdt_sock.connect(const.OP_START_UPLOAD, payload)
+            sv_response = self.rdt_sock.connect(const.OP_START_UPLOAD, payload)
+            if sv_response.opcode == const.OP_ERROR:
+                logger.error("Error en el servidor ")
+                return
             start_time = time.time()
             # envio los datos
             with open(self.args.src, "rb") as f:
