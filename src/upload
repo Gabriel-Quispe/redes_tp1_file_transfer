@@ -25,6 +25,10 @@ class FRDT_Upload(FRDTClient):
                 return
             start_time = time.time()
             # envio los datos
+            self.show_protocol_info(self.args.protocol)
+            
+            logger.info(f"Iniciando carga de archivo {self.args.src}")
+            
             with open(self.args.src, "rb") as f:
                 #el socket rdt se encarga de crear los paquetes
                 self.rdt_sock.send(f.read())

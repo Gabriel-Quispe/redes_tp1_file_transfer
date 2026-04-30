@@ -83,7 +83,11 @@ class FRDTSocket:
         max_overall_retry = 10
         while max_overall_retry>0:
             try:
-                return self.p_strategy.receive_data()
+                op,payload= self.p_strategy.receive_data()
+                if op == const.OP_ERROR:
+                    logger.error(f"Error transmitiendo datos: {payload.decode() if payload else "Error"}")
+                    max_overall_retry-=1    
+                return op, payload
             except socket.timeout:
                 max_overall_retry-=1
                 continue

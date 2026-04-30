@@ -28,6 +28,8 @@ def welcome_client(address,rdt_segment:Segment,drive_dir):
     try:
         #extraigo los metadatos (applayer)        
         protocol_op = struct.unpack("!B", rdt_segment.payload[:1])[0]
+        logger.info("")
+        logger.info(f"Cliente {address[0]} redirigido al puerto {address[1]}")
         show_protocol_info(protocol_op)
         
         rdt_sock = FRDTSocket(address,protocol_op)
@@ -130,6 +132,7 @@ if __name__ == "__main__":
     logger.info(f"Esperando conexiones en el puerto {sv_port}")
     while True:
         raw_data, addr = welcome_socket.recvfrom(buff_size)
+        logger.info(f"Cliente {addr}")
         try:
             segment = Segment.unpack(raw_data)            
             # Si aparece un nuevo request de conexión

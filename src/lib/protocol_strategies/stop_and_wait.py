@@ -33,7 +33,7 @@ class StopAndWait(ProtocolStrategy):
             #acá el bucle sigue al igual que en el libro    
             except (socket.timeout, ValueError):
                 retries+=1
-                logger.error(f"TIMEOUT! REINTENTO {retries}")
+                logger.debug(f"TIMEOUT! REINTENTO {retries}")
                 if max_retry is not None and retries>=max_retry:
                     raise ConnectionError("Cerrando conexion ")
                 logger.debug(f"Retransmitiendo seq {segment.seq_num}...")
@@ -72,3 +72,4 @@ class StopAndWait(ProtocolStrategy):
                 logger.debug(f"Error {e}")
                 retries+=1
                 continue
+        return (const.OP_ERROR, b"Timeout: Maximo de reintentos alcanzado")

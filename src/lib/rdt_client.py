@@ -1,5 +1,6 @@
 import argparse
 import os
+import struct
 import lib.const as const
 from lib.logger import *
 from lib.rdt_socket import FRDTSocket
@@ -26,3 +27,10 @@ class FRDTClient:
         self.rdt_sock = FRDTSocket((self.args.host, self.args.port), self.args.protocol)
     def run(self):
         pass
+    def show_protocol_info(self,protocol_op):
+        protocol_name:str=""
+        if protocol_op==const.PROTOCOL_SR:
+            protocol_name:str="Selective Repeat"
+        else:
+            protocol_name:str="Stop n Wait"
+        logger.info(protocol_name)
