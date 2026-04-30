@@ -18,7 +18,7 @@ class FRDTSocket:
         self.p_strategy:ProtocolStrategy=None
         match protocol_strategy:
             case const.PROTOCOL_SR:
-                self.p_strategy = SelectiveRepeat(self.address,self.socket,self.timeout)
+                self.p_strategy = SelectiveRepeat(self.address,self.socket)
             case const.PROTOCOL_SW:
                 self.p_strategy = StopAndWait(self.address,self.socket,self.timeout)
             case _:
