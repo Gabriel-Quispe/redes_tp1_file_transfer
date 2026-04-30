@@ -19,7 +19,7 @@ class FRDT_Upload(FRDTClient):
             # Handshake
             sv_response = self.rdt_sock.connect(const.OP_START_UPLOAD, payload)
             if sv_response.opcode == const.OP_ERROR:
-                logger.error("Error en el servidor ")
+                logger.error("Error en el servidor")
                 return
             start_time = time.time()
             # envio los datos
@@ -29,6 +29,8 @@ class FRDT_Upload(FRDTClient):
             final_time = time.time()-start_time
             #estadisticas de tiempo y throughput   
             show_stats(final_time,size)
+        except ConnectionError as e:
+            logger.error(f"Error intentando conectar: {e}")
         except Exception as e:
             logger.error(f"Error en la subida: {e}")
         finally:
