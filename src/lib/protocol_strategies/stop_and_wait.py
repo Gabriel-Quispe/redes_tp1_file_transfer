@@ -5,18 +5,18 @@ from lib.segment import *
 from lib.logger import logger
 import socket
 class StopAndWait(ProtocolStrategy):
-    def __init__(self, address, socket):
-        super().__init__(address, socket)
+    def __init__(self, address, socket,timeout):
+        super().__init__(address, socket,timeout)
         self.wsize = 1
         self.bit_sw = 1
     def set_window(self,tam:int):
-        return
+        self.wsize=1
     
     # Por lo general max retry siempre es None, solo se usa en el cierre de la conexión
     # para evitar el problema de los ejercitos
     def send_data(self, segment:Segment, max_retry:Optional[int]=10)-> Optional[Segment]:
         retries = 0
-        while True:
+        while retries<max_retry:
             #acá fuerzo que se use este protocolo
             segment.seq_num=self.bit_sw
             
@@ -32,7 +32,6 @@ class StopAndWait(ProtocolStrategy):
                     return ack_pkt
             #acá el bucle sigue al igual que en el libro    
             except (socket.timeout, ValueError):
-                # la logica de reintentos solo se usa al finalizar la conexión
                 retries+=1
                 logger.error(f"TIMEOUT! REINTENTO {retries}")
                 if max_retry is not None and retries>=max_retry:
@@ -40,10 +39,11 @@ class StopAndWait(ProtocolStrategy):
                 logger.debug(f"Retransmitiendo seq {segment.seq_num}...")
                 continue
     
-    def receive_data(self) -> Tuple[int, Optional[bytes]]:
+    def receive_data(self,max_retry=10) -> Tuple[int, Optional[bytes]]:
         # acá evito que se muera el receptor(cliente y servidor puede ser receptores)
-        self.socket.settimeout(None)
-        while True:
+        self.socket.settimeout(const.TIMEOUT)
+        retries=0
+        while retries<max_retry:
             try:
                 raw_data, addr = self.socket.recvfrom(self.receive_tam)
                 # por las dudas
@@ -67,8 +67,8 @@ class StopAndWait(ProtocolStrategy):
                     continue
                 else:
                     logger.debug(f"Seq {segment.seq_num} DUPLICADO.")
-
-            except ValueError as e:
+            except Exception as e:
                 # En snw se espera el timeout 
                 logger.debug(f"Error {e}")
+                retries+=1
                 continue
