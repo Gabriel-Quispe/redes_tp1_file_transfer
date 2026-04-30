@@ -4,18 +4,23 @@ import lib.const as const
 from lib.segment import Segment
 from lib.logger import logger
 class ProtocolStrategy:
-    def __init__(self,address,socket):
+    def __init__(self,address,socket,timeout=const.TIMEOUT):
+        self.timeout=timeout
         self.receive_tam=4096 #Esto es más que un paq, por seguridad
         self.next_seq=1
         self.address=address
         self.socket:sckt.socket=socket
         self.wsize=const.SV_MAX_WIN
     def set_window(self,tam:int)->None:
-        pass
+        self.wsize=tam
     def send_data(self, segment:Segment, max_retry:int=10)-> Optional[Segment]:
         pass
+    def update_timeout(self,new_timeout):
+        if new_timeout<=0:
+            return
+        self.timeout=new_timeout
     def do_handshake(self,segment: Segment)-> Optional[Segment]:        
-        
+        """Deprecado: esto va en el socket, no en la strategy"""
         while True:
             # intentamos enviar el paquete de inicio
             # hasta que alguien responda
@@ -35,5 +40,5 @@ class ProtocolStrategy:
                     raise ConnectionAbortedError(recv_response.payload.decode())
             except (sckt.timeout, ValueError):
                 continue
-    def receive_data(self) -> Tuple[int, Optional[bytes]]:
+    def receive_data(self,max_retry=10) -> Tuple[int, Optional[bytes]]:
         pass
