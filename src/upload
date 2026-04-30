@@ -2,7 +2,8 @@
 import struct
 from lib.segment import Segment
 from lib.rdt_client import *
-import time  
+import time
+from lib.logger import configure_logger,logger
 class FRDT_Upload(FRDTClient):
     def __init__(self):
         super().__init__("File Reliable Data Transfer")
@@ -10,6 +11,7 @@ class FRDT_Upload(FRDTClient):
     
     def run(self):
         self.setup()
+        configure_logger(verbose=self.args.verbose,quiet=self.args.quiet)
         if not os.path.exists(self.args.src):
             logger.error(f"El archivo {self.args.src} no existe.")
             return
