@@ -8,7 +8,8 @@ from lib.protocol_strategies.protocol_strategy import *
 from lib.logger import logger
 # recibe una direccion y una strategy (Stop n Wait o Selective Repeat)
 class FRDTSocket:
-    def __init__(self,address,protocol_strategy):
+    def __init__(self,address,protocol_strategy,timeout=const.TIMEOUT):
+        self.timeout=timeout
         self.next_seq = 1
         self.protocol_id = protocol_strategy
         self.address = address
@@ -17,9 +18,9 @@ class FRDTSocket:
         self.p_strategy:ProtocolStrategy=None
         match protocol_strategy:
             case const.PROTOCOL_SR:
-                self.p_strategy = SelectiveRepeat(self.address,self.socket)
+                self.p_strategy = SelectiveRepeat(self.address,self.socket,self.timeout)
             case const.PROTOCOL_SW:
-                self.p_strategy = StopAndWait(self.address,self.socket)
+                self.p_strategy = StopAndWait(self.address,self.socket,self.timeout)
             case _:
                 raise ValueError("Protocolo no soportado!")
         #actualizo la ventana segun protocolo
@@ -34,9 +35,8 @@ class FRDTSocket:
         # la capa de transporte mete el payload en un segmento
         request_segment = Segment(op_start, 0, self.wsize, payload)
         
-        # la estrategia elegida se encarga de asegurar el handshake,
-        # devolviendo el segmento de respuesta del server
-        response_segment = self.p_strategy.do_handshake(request_segment)
+        # El socket se encarga del handshake
+        response_segment = self.do_handshake(request_segment)
         # luego del handshake, debe retornar la nueva direccion dada por el server
         self.address=self.p_strategy.address
         
@@ -80,7 +80,14 @@ class FRDTSocket:
             self.next_seq += 1
     def recv(self)->Tuple[int, Optional[bytes]]:
         logger.debug(f"Recibiendo paquete")         
-        return self.p_strategy.receive_data()
+        max_overall_retry = 10
+        while max_overall_retry>0:
+            try:
+                return self.p_strategy.receive_data()
+            except socket.timeout:
+                max_overall_retry-=1
+                continue
+        raise ConnectionError("Conexión perdida: El servidor no responde.")
     
 
     def close(self):
@@ -88,7 +95,7 @@ class FRDTSocket:
         fin_segment = Segment(const.OP_END, self.p_strategy.next_seq, 1, b"")
         # No necesito que sea confiable el close! (se quedan infinitamente esperando el ack del ack
         # como dijeron en clase con el ejemplo de los generales)
-        self.socket.settimeout(const.TIMEOUT)
+        self.socket.settimeout(self.timeout)
         try:
             self.p_strategy.send_data(fin_segment,3)
         except Exception as e:
@@ -96,3 +103,28 @@ class FRDTSocket:
         finally:
             self.socket.close()
             logger.info("Server cerró su conexión")
+            
+    def do_handshake(self,segment: Segment)-> Optional[Segment]:
+        max_try=10
+        while max_try>0:
+            # intentamos enviar el paquete de inicio
+            # hasta que alguien responda
+            self.socket.sendto(segment.pack(), self.address)
+            try:
+                self.socket.settimeout(self.timeout*2)
+                raw_data, hilo_address = self.socket.recvfrom(1024)
+                recv_response = Segment.unpack(raw_data)
+                
+                #si el receptor respondio al handshake!
+                if recv_response.opcode == const.OP_ACK:
+                    # actualizamos el nuevo address (provisto por el server)
+                    self.address = hilo_address
+                    self.p_strategy.address = hilo_address
+                    self.wsize=self.p_strategy.wsize
+                    return recv_response         
+                if recv_response.opcode == const.OP_ERROR:
+                    logger.error(f"Error en handshake! {recv_response.payload}")
+                    raise ConnectionAbortedError(recv_response.payload.decode())
+            except (sckt.timeout, ValueError):
+                max_try-=1
+                continue
