@@ -9,6 +9,7 @@ from lib.logger import logger,configure_logger,show_stats
 import threading
 from lib.segment import Segment
 import shutil # para validar espacio en disco del server
+sv_ip="0.0.0.0"
 sv_port=const.PORT
 buff_size=4096
 
@@ -55,10 +56,9 @@ def welcome_client(address,rdt_segment:Segment,drive_dir):
 
 def upload_from(rdt_sock:FRDTSocket,file_path:str,size):
     logger.info(f"Cargando Archivo en {file_path}")
+    start_time = time.time()
+    bytes_received = 0
     with open(file_path, "wb") as f:
-        bytes_received = 0
-        start_time = time.time()
-        final_time = start_time
         while bytes_received < size:
             opcode,chunk = rdt_sock.recv()
             if opcode == const.OP_ERROR:
@@ -79,10 +79,21 @@ def upload_from(rdt_sock:FRDTSocket,file_path:str,size):
             
 def download_to(rdt_sock:FRDTSocket,file_path:str):
     logger.info(f"Descargando {file_path}")
+    rdt_sock.recv()
+    chunk_size=1024*100 #100kb
     # abro el archivo y lo envio con send(que se encarga de segmentarlo)
+    start_time = time.time()
+    bytes_sent=0
     with open(file_path,"rb") as file:
-        rdt_sock.send(file)
-    
+        while True:
+            chunk = file.read(chunk_size)
+            if not chunk:
+                break
+            rdt_sock.send(chunk)
+            bytes_sent+= len(chunk)
+    final_time = time.time()-start_time
+    logger.info(f"Transmisión exitosa")
+    show_stats(final_time,bytes_sent)
     
 if __name__ == "__main__":
     os.umask(0) # para ver al archivo cargandose en vscode (esto evita que se bloquee)
@@ -92,7 +103,7 @@ if __name__ == "__main__":
         os.makedirs(drive_dir)
     # Socket Maestro: El unico socket que hace bind al puerto 65535, y no es confiable
     welcome_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    welcome_socket.bind(("10.0.0.2", sv_port))
+    welcome_socket.bind((sv_ip, sv_port))
     logger.info(f"Servidor iniciado!")
     logger.info(f"Esperando conexiones en el puerto{sv_port}")
     while True:
