@@ -8,6 +8,7 @@ from lib.rdt_socket import FRDTSocket
 from lib.logger import logger,configure_logger,show_stats
 import threading
 from lib.segment import Segment
+import shutil # para validar espacio en disco del server
 sv_port=const.PORT
 buff_size=4096
 
@@ -37,8 +38,13 @@ def welcome_client(address,rdt_segment:Segment,drive_dir):
             download_to(rdt_sock,file_path)
         elif rdt_segment.opcode == const.OP_START_UPLOAD:
             # aca el filesize lo otorga el cliente justo despues del primer byte
+            _,_,space = shutil.disk_usage(drive_dir)
             file_size= struct.unpack("!Q",rdt_segment.payload[1:9])[0]
-            rdt_sock.accept_connection(const.OP_ACK)
+            if file_size>space:
+                logger.error(f"No hay espacio suficiente en el servidor para{file_name} ")
+                rdt_sock.accept_connection(const.OP_ERROR,b"El servidor no tiene espacio disponible")
+                return
+            rdt_sock.accept_connection(const.OP_ACK,b"Iniciando carga de archivo")
             upload_from(rdt_sock,file_path,file_size)
         else:
             logger.error(f"Operación {rdt_segment.opcode} no soportada")
@@ -72,16 +78,10 @@ def upload_from(rdt_sock:FRDTSocket,file_path:str,size):
     show_stats(final_time,size)
             
 def download_to(rdt_sock:FRDTSocket,file_path:str):
-    if not os.path.exists(file_path):
-        logger.error(f"El archivo {file_path} no existe en el server")
-        err_segment = Segment(const.OP_ERROR,0,0,b"FILE_NOT_FOUND")        
-        try:
-            rdt_sock.p_strategy.send_data(err_segment,3)
-        except Exception:
-            pass
-        return
     logger.info(f"Descargando {file_path}")
-    # implementar download
+    # abro el archivo y lo envio con send(que se encarga de segmentarlo)
+    with open(file_path,"rb") as file:
+        rdt_sock.send(file)
     
     
 if __name__ == "__main__":
