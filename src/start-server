@@ -1,4 +1,5 @@
 #!/bin/python
+import argparse
 import os
 import socket
 import struct
@@ -13,13 +14,22 @@ sv_ip="0.0.0.0"
 sv_port=const.PORT
 buff_size=4096
 
-
+def show_protocol_info(protocol_op):
+    protocol_name:str=""
+    if protocol_op==const.PROTOCOL_SR:
+        protocol_name:str="Selective Repeat"
+    else:
+        protocol_name:str="Stop n Wait"
+    logger.info(protocol_name)
 # esto siempre se ejecuta en un nuevo hilo
 def welcome_client(address,rdt_segment:Segment,drive_dir):
     rdt_sock = None
+    
     try:
         #extraigo los metadatos (applayer)        
         protocol_op = struct.unpack("!B", rdt_segment.payload[:1])[0]
+        show_protocol_info(protocol_op)
+        
         rdt_sock = FRDTSocket(address,protocol_op)
         offset=0
         if rdt_segment.opcode == const.OP_START_UPLOAD:
@@ -37,6 +47,7 @@ def welcome_client(address,rdt_segment:Segment,drive_dir):
             size= os.path.getsize(file_path)
             rdt_sock.accept_connection(const.OP_ACK,struct.pack("!Q",size))
             download_to(rdt_sock,file_path)
+            
         elif rdt_segment.opcode == const.OP_START_UPLOAD:
             # aca el filesize lo otorga el cliente justo despues del primer byte
             _,_,space = shutil.disk_usage(drive_dir)
@@ -53,6 +64,8 @@ def welcome_client(address,rdt_segment:Segment,drive_dir):
         logger.error(f"Error con el cliente {address}: {e}")
     finally:
         if rdt_sock: rdt_sock.close()
+    
+    
 
 def upload_from(rdt_sock:FRDTSocket,file_path:str,size):
     logger.info(f"Cargando Archivo en {file_path}")
@@ -94,18 +107,27 @@ def download_to(rdt_sock:FRDTSocket,file_path:str):
     final_time = time.time()-start_time
     logger.info(f"Transmisión exitosa")
     show_stats(final_time,bytes_sent)
-    
+def _add_common_arguments(parser:argparse.ArgumentParser):
+       parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity")
+       parser.add_argument("-q", "--quiet", action="store_true", help="decrease output verbosity")
+       parser.add_argument("-H", "--host", default="10.0.0.2", help="server IP address")
+       parser.add_argument("-p", "--port", type=int, default=const.PORT, help="server port")
+       parser.add_argument("-s", "--storage", type=str, default="storage", help="storage")
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Servidor FRDT")
+    _add_common_arguments(parser)
+    args = parser.parse_args()
+    configure_logger(verbose=args.verbose,quiet=args.quiet)
+
     os.umask(0) # para ver al archivo cargandose en vscode (esto evita que se bloquee)
-    configure_logger(True, False)
-    drive_dir = "storage"
+    drive_dir = args.storage
     if not os.path.exists(drive_dir):
         os.makedirs(drive_dir)
     # Socket Maestro: El unico socket que hace bind al puerto 65535, y no es confiable
     welcome_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     welcome_socket.bind((sv_ip, sv_port))
     logger.info(f"Servidor iniciado!")
-    logger.info(f"Esperando conexiones en el puerto{sv_port}")
+    logger.info(f"Esperando conexiones en el puerto {sv_port}")
     while True:
         raw_data, addr = welcome_socket.recvfrom(buff_size)
         try:
@@ -123,3 +145,4 @@ if __name__ == "__main__":
                 logger.debug(f"Paquete ignorado {addr} con opcode {segment.opcode}")                
         except Exception as e:
             logger.error(f"Error procesando paquete en el server master: {e}")
+            

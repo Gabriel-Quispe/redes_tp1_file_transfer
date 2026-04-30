@@ -1,5 +1,5 @@
 import logging
-def show_stats(final_time, size):    
+def show_stats(final_time, size):
     throughput=0
     if final_time>0:
         throughput=(size)/final_time
@@ -8,7 +8,7 @@ def show_stats(final_time, size):
     logger.info(f"Tiempo: {final_time:.2f} segundos")
     logger.info(f"Tamaño: {size / 1024:.2f} KB")
     logger.info(f"Throughput promedio: {throughput:.2f} Bps")
-def configure_logger(verbose=False, quiet=True):
+def configure_logger(verbose=False, quiet=False):
     if quiet:
         level = logging.ERROR
     elif verbose:
