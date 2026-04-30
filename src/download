@@ -5,19 +5,54 @@ from lib.const import *
 from lib.rdt_client import *
 
 class FDRT_Download(FRDTClient):
-    def __init__(self, description):
+    def __init__(self):
         super().__init__("File Reliable Data Transfer (Download)")
         self.parser.add_argument("-d", "--dst",required=True,help="destination file path")
     
     def run(self):
         self.setup()
-        
         # en el payload existe el protocolo + nombre del archivo
         # 1 byte para el protocolo y todo lo demas es el nombre
         payload= struct.pack("!B",self.args.protocol) + self.args.name.encode()
+        final_path= os.path.join(self.args.dst,self.args.name)
         try:
             # envio el payload como inicio del handshake
             # espero la respuesta del servidor (con el tamaño del archivo)
             sv_response = self.rdt_sock.connect(const.OP_START_DOWNLOAD,payload)
-            
-            
+            if not os.path.exists(self.args.dst):
+                os.makedirs(self.args.dst,exist_ok=True)
+            if sv_response.opcode==OP_ERROR:
+                logger.error(f"Error en el servidor",sv_response.payload.decode())
+                return
+            logger.info(f"Descargando Archivo en {self.args.dst}")
+            size = struct.unpack("!Q",sv_response.payload)[0]
+            start_time = time.time()                    
+            with open(final_path, "wb") as f:
+                self.rdt_sock.send(B"Cliente Listo")
+                bytes_received = 0
+                while bytes_received < int(size):
+                    opcode,chunk = self.rdt_sock.recv()
+                    if opcode == const.OP_ERROR:
+                        err_msg=chunk.decode()
+                        logger.error(f"Error recibido: {err_msg}")
+                        raise RuntimeError(f"Error remoto: {err_msg}")
+                    if opcode==const.OP_END:
+                        logger.info(f"Fin de Transmisión {bytes_received}")
+                        break
+                    f.write(chunk)
+                    bytes_received += len(chunk)
+            final_time = time.time() - start_time
+            logger.info(f"Transmisión exitosa {bytes_received}")
+            show_stats(final_time,size)
+            if bytes_received>=size:
+                # esto evita que el hilo muera antes que el cliente se desconecte
+                self.rdt_sock.recv()
+        except ConnectionError as e:
+            logger.error(f"Error intentando conectar: {e}")
+        except Exception as e:
+            logger.error(f"Error en la descarga: {e}")
+        finally:
+            self.rdt_sock.close()
+
+if __name__ == "__main__":
+    FDRT_Download().run()
