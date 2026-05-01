@@ -28,7 +28,7 @@ class FDRT_Download(FRDTClient):
             size = struct.unpack("!Q",sv_response.payload)[0]
             start_time = time.time()                    
             with open(final_path, "wb") as f:
-                self.rdt_sock.send(B"Cliente Listo")
+                #self.rdt_sock.send(B"Cliente Listo")
                 bytes_received = 0
                 while bytes_received < int(size):
                     opcode,chunk = self.rdt_sock.recv()
