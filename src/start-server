@@ -89,16 +89,18 @@ def upload_from(rdt_sock:FRDTSocket,file_path:str,size):
     if bytes_received>=size:
         # esto evita que el hilo muera antes que el cliente se desconecte
         rdt_sock.recv()
+    else:
+        raise ConnectionError(f"Transmision incompleta: {bytes_received}/{size} bytes")
     logger.info(f"Transmisión exitosa {bytes_received}")
-    show_stats(final_time,size)
-            
+    show_stats(final_time,size)            
 def download_to(rdt_sock:FRDTSocket,file_path:str):
     logger.info(f"Descargando {file_path}")
-    rdt_sock.recv()
+    #rdt_sock.recv()
     chunk_size=1024*100 #100kb
     # abro el archivo y lo envio con send(que se encarga de segmentarlo)
     start_time = time.time()
     bytes_sent=0
+    size=os.path.getsize(file_path)
     with open(file_path,"rb") as file:
         while True:
             chunk = file.read(chunk_size)
@@ -106,9 +108,12 @@ def download_to(rdt_sock:FRDTSocket,file_path:str):
                 break
             rdt_sock.send(chunk)
             bytes_sent+= len(chunk)
-    final_time = time.time()-start_time
-    logger.info(f"Transmisión exitosa")
-    show_stats(final_time,bytes_sent)
+    if bytes_sent>=size:
+        final_time = time.time()-start_time
+        logger.info(f"Transmisión exitosa")
+        show_stats(final_time,bytes_sent)
+    else:
+        raise ConnectionError(f"Transmision incompleta: {bytes_sent}/{len(file)} bytes")
 def _add_common_arguments(parser:argparse.ArgumentParser):
        parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity")
        parser.add_argument("-q", "--quiet", action="store_true", help="decrease output verbosity")
