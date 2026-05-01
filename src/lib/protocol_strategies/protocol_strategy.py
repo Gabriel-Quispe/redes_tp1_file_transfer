@@ -7,10 +7,17 @@ class ProtocolStrategy:
     def __init__(self,address,socket,timeout=const.TIMEOUT):
         self.timeout=timeout
         self.receive_tam=4096 #Esto es más que un paq, por seguridad
+        self.base_seq=1
         self.next_seq=1
+        
+        self.recv_base_seq=1
+        self.recv_next_seq=1
+        
+        
         self.address=address
         self.socket:sckt.socket=socket
         self.wsize=const.SV_MAX_WIN
+        self.active=True
     def set_window(self,tam:int)->None:
         self.wsize=tam
     def send_data(self, segment:Segment, max_retry:int=10)-> Optional[Segment]:
@@ -41,4 +48,7 @@ class ProtocolStrategy:
             except (sckt.timeout, ValueError):
                 continue
     def receive_data(self,max_retry=10) -> Tuple[int, Optional[bytes]]:
+        pass
+    def stop_strategy(self):
+        """Para limpiar hilos y demas cosas en cada estrategia"""
         pass
