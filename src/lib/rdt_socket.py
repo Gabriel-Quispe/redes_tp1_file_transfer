@@ -77,9 +77,9 @@ class FRDTSocket:
             # La estrategia se encarga de que este segmento llegue
             self.p_strategy.send_data(segment)
             
-            self.next_seq += 1
+            #self.next_seq += 1
     def recv(self)->Tuple[int, Optional[bytes]]:
-        logger.debug(f"Recibiendo paquete")         
+        logger.debug(f"Recibiendo paquete")
         max_overall_retry = 10
         while max_overall_retry>0:
             try:
@@ -100,6 +100,7 @@ class FRDTSocket:
         # No necesito que sea confiable el close! (se quedan infinitamente esperando el ack del ack
         # como dijeron en clase con el ejemplo de los generales)
         self.socket.settimeout(self.timeout)
+        self.p_strategy.stop_strategy()
         try:
             self.p_strategy.send_data(fin_segment,3)
         except Exception as e:
