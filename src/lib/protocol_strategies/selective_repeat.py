@@ -1,5 +1,6 @@
 import threading
 import socket
+import time
 from typing import Dict, Optional, Tuple
 
 from lib.protocol_strategies.protocol_strategy import ProtocolStrategy
@@ -13,52 +14,111 @@ class SelectiveRepeat(ProtocolStrategy):
         super().__init__(address, socket)
         self.wsize = const.SV_MAX_WIN
         self.recv_buffer: Dict[int, Segment] = {}
+        self._window: Dict[int, dict] = {}
+        self._lock = threading.Lock()
+        self._abort_event = threading.Event()
+        self._ack_event = threading.Event()
+        self._last_ack = None
+        self._recv_thread = None
 
     def set_window(self, tam: int):
         self.wsize = max(const.SV_CLIENT_MIN_WIN, tam)
+
+    def _start_recv_thread(self):
+        """Arranca el hilo receptor de ACKs si no está corriendo."""
+        if self._recv_thread is not None and self._recv_thread.is_alive():
+            return
+        self._recv_thread = threading.Thread(target=self._recv_loop, daemon=True)
+        self._recv_thread.start()
+
+    def _recv_loop(self):
+        """Hilo que recibe ACKs continuamente mientras hay segmentos en vuelo."""
+        while True:
+            with self._lock:
+                if not self._window:
+                    break
+            try:
+                self.socket.settimeout(const.TIMEOUT * 2)
+                raw_data, _ = self.socket.recvfrom(self.receive_tam)
+                ack_pkt = Segment.unpack(raw_data)
+            except (socket.timeout, ValueError):
+                with self._lock:
+                    if not self._window:
+                        break
+                continue
+            except OSError:
+                break
+
+            if ack_pkt.opcode != const.OP_ACK:
+                continue
+
+            seq_acked = ack_pkt.seq_num
+            with self._lock:
+                if seq_acked in self._window and not self._window[seq_acked]["acked"]:
+                    logger.debug(f"[SR] ACK recibido para seq={seq_acked}")
+                    self._window[seq_acked]["acked"] = True
+                    self._window[seq_acked]["timer"].cancel()
+                    self._last_ack = ack_pkt
+            self._ack_event.set()
+
+    def _send_one(self, seq: int, max_retry: Optional[int]):
+        with self._lock:
+            if seq not in self._window or self._window[seq]["acked"]:
+                return
+            seg = self._window[seq]["segment"]
+            retries = self._window[seq]["retries"]
+
+        if max_retry is not None and retries >= max_retry:
+            logger.debug(f"[SR] Max reintentos alcanzados para seq={seq}, abortando")
+            self._abort_event.set()
+            return
+
+        logger.debug(f"[SR] Retransmitiendo seq={seq} (intento {retries + 1})")
+        self.socket.sendto(seg.pack(), self.address)
+
+        with self._lock:
+            if seq in self._window and not self._window[seq]["acked"]:
+                self._window[seq]["retries"] += 1
+                t = threading.Timer(const.TIMEOUT, self._send_one, args=[seq, max_retry])
+                t.daemon = True
+                self._window[seq]["timer"] = t
+                t.start()
+
     def send_data(self, segment: Segment, max_retry: Optional[int] = None) -> Optional[Segment]:
         """Envía un segmento con la lógica de Selective Repeat.
 
-        Cada segmento sin ACK tiene su propio timer. Cuando un timer expira
-        sólo se retransmite ese segmento, no toda la ventana (a diferencia
-        de Go-Back-N).
+        La ventana es compartida entre llamadas, permitiendo tener múltiples
+        segmentos en vuelo simultáneamente.
 
-        max_retry sólo se usa al cerrar la conexión (OP_END), igual que en
-        Stop & Wait, para evitar el problema de los dos ejércitos.
+        max_retry sólo se usa al cerrar la conexión (OP_END).
         """
+        if max_retry is not None:
+            while True:
+                with self._lock:
+                    pending = {k: v for k, v in self._window.items() if not v["acked"]}
+                    if not pending:
+                        break
+                self._ack_event.wait(timeout=const.TIMEOUT)
+                self._ack_event.clear()
+
         base_seq = self.next_seq
         segment.seq_num = base_seq
         self.next_seq += 1
 
-
-        window: Dict[int, dict] = {}
-        lock = threading.Lock()
-
-        def _send_one(seq: int):
-            with lock:
-                if seq not in window or window[seq]["acked"]:
-                    return
-                seg = window[seq]["segment"]
-                retries = window[seq]["retries"]
-
-            if max_retry is not None and retries >= max_retry:
+        while True:
+            if self._abort_event.is_set():
                 raise ConnectionError("Cerrando conexión")
+            with self._lock:
+                in_flight = sum(1 for v in self._window.values() if not v["acked"])
+                if in_flight < self.wsize:
+                    break
+            self._ack_event.wait(timeout=const.TIMEOUT)
+            self._ack_event.clear()
 
-            logger.debug(f"[SR] Retransmitiendo seq={seq} (intento {retries + 1})")
-            self.socket.sendto(seg.pack(), self.address)
-
-            with lock:
-                if seq in window and not window[seq]["acked"]:
-                    window[seq]["retries"] += 1
-                    t = threading.Timer(const.TIMEOUT, _send_one, args=[seq])
-                    t.daemon = True
-                    window[seq]["timer"] = t
-                    t.start()
-
-        t = threading.Timer(const.TIMEOUT, _send_one, args=[base_seq])
+        t = threading.Timer(const.TIMEOUT, self._send_one, args=[base_seq, max_retry])
         t.daemon = True
-        with lock:
-            window[base_seq] = {
+        with self._lock:
+            self._window[base_seq] = {
                 "segment": segment,
                 "acked": False,
                 "retries": 0,
@@ -69,38 +129,22 @@ class SelectiveRepeat(ProtocolStrategy):
         self.socket.sendto(segment.pack(), self.address)
         t.start()
 
-        last_ack = None
-        while True:
-            try:
-                self.socket.settimeout(const.TIMEOUT * 4)
-                raw_data, _ = self.socket.recvfrom(self.receive_tam)
-                ack_pkt = Segment.unpack(raw_data)
-            except (socket.timeout, ValueError):
-                with lock:
-                    if all(v["acked"] for v in window.values()):
+        self._start_recv_thread()
+
+        if max_retry is not None:
+            while True:
+                if self._abort_event.is_set():
+                    with self._lock:
+                        for entry in self._window.values():
+                            entry["timer"].cancel()
+                    raise ConnectionError("Cerrando conexión")
+                with self._lock:
+                    if self._window.get(base_seq, {}).get("acked", False):
                         break
-                continue
+                self._ack_event.wait(timeout=const.TIMEOUT)
+                self._ack_event.clear()
 
-            if ack_pkt.opcode != const.OP_ACK:
-                continue
-
-            seq_acked = ack_pkt.seq_num
-            with lock:
-                if seq_acked in window and not window[seq_acked]["acked"]:
-                    logger.debug(f"[SR] ACK recibido para seq={seq_acked}")
-                    window[seq_acked]["acked"] = True
-                    window[seq_acked]["timer"].cancel()
-                    last_ack = ack_pkt
-
-                if all(v["acked"] for v in window.values()):
-                    break
-
-        with lock:
-            for entry in window.values():
-                entry["timer"].cancel()
-
-        return last_ack
-
+        return self._last_ack
 
 
     def receive_data(self) -> Tuple[int, Optional[bytes]]:
