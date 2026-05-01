@@ -32,9 +32,9 @@ class FRDT_Upload(FRDTClient):
             with open(self.args.src, "rb") as f:
                 #el socket rdt se encarga de crear los paquetes
                 self.rdt_sock.send(f.read())
-            final_time = time.time()-start_time
+                final_time = time.time()-start_time
+                show_stats(final_time,size)
             #estadisticas de tiempo y throughput   
-            show_stats(final_time,size)
         except ConnectionError as e:
             logger.error(f"Error intentando conectar: {e}")
         except Exception as e:
