@@ -178,7 +178,8 @@
 <!-- 2. HIPÓTESIS -->
 <h1 class="sec" id="hipotesis">2. Hipótesis y suposiciones realizadas</h1>
 <ul>
-  <li>El servidor opera en <code>10.0.0.2:65535</code>. Cada cliente es redirigido a un puerto efímero para la transferencia.</li>
+  <li>Por defecto, el cliente se conecta a <code>10.0.0.2:65535</code>. Cada cliente es redirigido a un puerto efímero asignado por el SO para la transferencia.</li>
+  <li>El servidor escucha en todas las interfaces <code>0.0.0.0</code> en el puerto configurado vía <code>-p</code> (default: 65535), ambos valores son modificables por línea de comandos.</li>
   <li>Payload máximo por segmento: <strong>1442 bytes</strong> (MTU de Ethernet menos headers IP + UDP + RFTP).</li>
   <li>El checksum CRC32 se trunca a 16 bits para caber en el header; se considera suficiente para el entorno de pruebas.</li>
   <li>No se implementa control de congestión.</li>
