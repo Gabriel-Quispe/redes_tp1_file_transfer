@@ -83,6 +83,7 @@ class SelectiveRepeat(ProtocolStrategy):
         """Hilo Emisor: itera buscando paquetes con timer expirado"""
         while self.active:
             now = time.time()
+            something_todo=False
             with self.cond:
                 # Usamos list(keys) para poder borrar elementos sin error
                 for seq in list(self.window_data.keys()):
@@ -91,6 +92,7 @@ class SelectiveRepeat(ProtocolStrategy):
                     if entry["state"] == State.IN_FLIGHT:
                         # Si pasó el tiempo de timeout
                         if now - entry["time_stamp"] > self.timeout:
+                            something_todo=True # ALGO QUE HACER
                             if entry["retry"] <= 0:
                                 # Si estamos en proceso de cierre o el paquete es el fin, se sale
                                 if self.closing:
@@ -108,8 +110,9 @@ class SelectiveRepeat(ProtocolStrategy):
                             self.socket.sendto(entry["seg"].pack(), self.address)
                             entry["time_stamp"] = now
                             entry["retry"] -= 1
+                if not something_todo:
+                    self.cond.wait(timeout=self.timeout)
 
-                self.cond.wait(timeout=self.timeout)# duermo hasta este evento
 
     def _ack_receiver_loop(self):
         """Hilo Receptor: ACKs para deslizar la ventana"""
