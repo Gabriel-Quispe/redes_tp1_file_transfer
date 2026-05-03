@@ -10,8 +10,9 @@ from lib.logger import logger
 
 # recibe una direccion y una strategy (Stop n Wait o Selective Repeat)
 class FRDTSocket:
-    def __init__(self, address, protocol_strategy, timeout=const.TIMEOUT):
+    def __init__(self, address, protocol_strategy, timeout=const.TIMEOUT, max_win=None):
         self.timeout = timeout
+        self.max_win=max_win
         # self.next_seq = 1
         self.protocol_id = protocol_strategy
         self.address = address
@@ -57,7 +58,7 @@ class FRDTSocket:
 
     def accept_connection(self, opcode, payload: bytes = b"") -> Segment:
         """Acepta la conexion, negociando tamaño de ventana"""
-        self.wsize = const.SV_MAX_WIN // const.SV_MAX_CLIENTS
+        self.wsize = const.SV_MAX_WIN // const.SV_MAX_CLIENTS if self.max_win is None else self.max_win
         response_segment = Segment(opcode, 0, self.wsize, payload)
         logger.debug(f"Enviando respuesta inicial {opcode} a {self.address}")
         self.socket.sendto(response_segment.pack(), self.address)
@@ -114,7 +115,6 @@ class FRDTSocket:
             except Exception:
                 pass
             time.sleep(0.05)
-
         self.p_strategy.stop_strategy()
         self.socket.close()
         logger.info("Socket liberado")

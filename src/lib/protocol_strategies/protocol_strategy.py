@@ -42,7 +42,7 @@ class ProtocolStrategy:
         RTO = min[UBOUND,max[LBOUND,(BETA*SRTT)]]
         """
         lbound = const.TIMEOUT 
-        ubound = 1.0    # 1s
+        ubound = 10.0   # 1s
         beta = 2
         rto = min(ubound, max(lbound, beta * rtt)) #Retransmission timeout
         # nuevo_timeout = (1-a) * old_timeout + a*rto
