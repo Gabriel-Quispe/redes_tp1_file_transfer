@@ -33,13 +33,14 @@ class SelectiveRepeat(ProtocolStrategy):
         # Hilos
         self.ack_thread: Optional[threading.Thread] = None
         self.transmit_thread: Optional[threading.Thread] = None
+        self.cond = threading.Condition(self.lock)
         self.max_recv_retry = 6
 
     def wakeup_threads(self):
         """Despierta a los hilos para laburar"""
         if not self.active:
             return
-        with self.lock:
+        with self.cond:
             if self.ack_thread is None or not self.ack_thread.is_alive():
                 self.active = True
                 self.ack_thread = threading.Thread(
@@ -53,10 +54,9 @@ class SelectiveRepeat(ProtocolStrategy):
 
     def send_data(self, segment: Segment, max_retry: int = 10):
         self.wakeup_threads()
-        while self.active:
-            with self.lock:
+        with self.cond:
+            while self.active:
                 win_tam = self.base_seq + self.wsize
-
                 # Si existe espacio: se envia el paquete
                 if self.next_seq < win_tam:
                     segment.seq_num = self.next_seq
@@ -75,16 +75,15 @@ class SelectiveRepeat(ProtocolStrategy):
                     self.socket.sendto(segment.pack(), self.address)
                     self.next_seq += 1
                     return
-            time.sleep(0.001)
-        with self.lock:
-            if not self.closing:
+                self.cond.wait()
+        if not self.closing:
                 raise ConnectionError("[SR] reintentos de envió agotados")
 
     def _retransmitter_loop(self):
         """Hilo Emisor: itera buscando paquetes con timer expirado"""
         while self.active:
             now = time.time()
-            with self.lock:
+            with self.cond:
                 # Usamos list(keys) para poder borrar elementos sin error
                 for seq in list(self.window_data.keys()):
                     entry = self.window_data[seq]
@@ -110,7 +109,7 @@ class SelectiveRepeat(ProtocolStrategy):
                             entry["time_stamp"] = now
                             entry["retry"] -= 1
 
-            time.sleep(0.005)  # Frecuencia del barrido
+                self.cond.wait(timeout=self.timeout)# duermo hasta este evento
 
     def _ack_receiver_loop(self):
         """Hilo Receptor: ACKs para deslizar la ventana"""
@@ -122,7 +121,7 @@ class SelectiveRepeat(ProtocolStrategy):
 
                 if ack_pkt.opcode != const.OP_ERROR:
                     seq = ack_pkt.seq_num
-                    with self.lock:
+                    with self.cond:
                         # Si recibo un ack que esta en ventana
                         if seq in self.window_data:
                             entry = self.window_data[seq]
@@ -133,6 +132,8 @@ class SelectiveRepeat(ProtocolStrategy):
                             logger.debug(f"ACK recibido seq={seq}")
                             # Deslizar ventana: eliminamos los paq Acked
                             self._slide_window()
+                            #esta condicion despierta a los demas threads
+                            self.cond.notify_all()
 
             except (socket.timeout, ValueError):
                 continue
@@ -209,11 +210,13 @@ class SelectiveRepeat(ProtocolStrategy):
         """Limpieza de hilos y recursos.
         Esto se llama en el socket cuando intentamos cerrar la conexion.
         """
-        with self.lock:
+        with self.cond:
             self.closing = True
             self.active = False
             self.window_data.clear()
             self.recv_buffer.clear()
+            # si no despierto los threads no puedo hacer join
+            self.cond.notify_all() 
         if self.ack_thread:
             self.ack_thread.join(timeout=1)
         if self.transmit_thread:
