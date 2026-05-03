@@ -44,15 +44,13 @@ class FDRT_Download(FRDTClient):
             final_time = time.time() - start_time
             logger.info(f"Transmisión exitosa {bytes_received}")
             show_stats(final_time,size)
-            if bytes_received>=size:
-                # esto evita que el hilo muera antes que el cliente se desconecte
-                self.rdt_sock.recv()
+            #cierro unilateralmente
+            self.rdt_sock.close()
         except ConnectionError as e:
             logger.error(f"Error intentando conectar: {e}")
         except Exception as e:
             logger.error(f"Error en la descarga: {e}")
-        finally:
-            self.rdt_sock.close()
+            
 
 if __name__ == "__main__":
     FDRT_Download().run()
