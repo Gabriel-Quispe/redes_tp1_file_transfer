@@ -75,9 +75,9 @@ class SelectiveRepeat(ProtocolStrategy):
                     self.socket.sendto(segment.pack(), self.address)
                     self.next_seq += 1
                     return
-                self.cond.wait()
-        if not self.closing:
-                raise ConnectionError("[SR] reintentos de envió agotados")
+                self.cond.wait(timeout=0.5)        
+        if not self.active:
+            return
 
     def _retransmitter_loop(self):
         """Hilo Emisor: itera buscando paquetes con timer expirado"""
