@@ -72,3 +72,6 @@ class StopAndWait(ProtocolStrategy):
                 retries+=1
                 continue
         return (const.OP_ERROR, b"Timeout: Maximo de reintentos alcanzado")
+    def stop_strategy(self):
+        self.active=False
+        self.closing=True
