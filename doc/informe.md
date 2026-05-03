@@ -38,6 +38,19 @@ El diseño del header se alinea en 4 palabras de 32 bits (Sumando un total de 16
       |            Checksum           |         Payload Length        |
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
+Actualización dinámica del Retransmission Timeout por parte del lado emisor de datos. 
+
+lbound = const.TIMEOUT
+        ubound = 1.0    # 1s
+        beta = 2
+        rto = min(ubound, max(lbound, beta * rtt)) #Retransmission timeout
+        # nuevo_timeout = (1-a) * old_timeout + a*rto
+        self.timeout = 0.8 * self.timeout + 0.2*rto
+¿Por qué el receptor no necesita un ajuste a su rto de forma dinámica? La función del receptor de datos es reaccionar a lo que llega. Si no llega nada, no tiene nada que retransmitir, por lo que no necesita una mejora de retransmisión. Usa un timeout genérico para no quedarse bloqueado eternamente
+
+Es el emisor quien pone un paquete en la red y espera el ACK. El RTO dinámico (estimando el RTT con el algoritmo de Jacobson/Karn rfc 793) permite al emisor no esperar de más si la red está rápida, o no saturar la red si está lenta.
+
+El tamaño de la ventana es fijo. Si bien el cliente siempre quiere poner la ventana máxima posible, cuando se acepta la conexión se establece la ventana minima priorizando al servidor. 
 ......
 
 # Pruebas
