@@ -133,6 +133,7 @@ if __name__ == "__main__":
         os.makedirs(drive_dir)
     # Socket Maestro: El unico socket que hace bind al puerto 65535, y no es confiable
     welcome_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sv_ip = args.host
     welcome_socket.bind((sv_ip, sv_port))
     logger.info(f"Servidor iniciado!")
     logger.info(f"Esperando conexiones en el puerto {sv_port}")
