@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  @page {
+    size: A4;
+    margin: 2.2cm 2.4cm 2.2cm 2.4cm;
+    @bottom-right { content: counter(page); font-size: 10px; color: #888; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "DejaVu Sans", Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+    margin: 0;
+  }
+
+  /* --- Cover page --- */
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .cover {
+    page: cover;
+    width: 100%;
+    height: 297mm;
+    display: block;
+    text-align: center;
+    padding-top: 6cm;
+    box-sizing: border-box;
+    page-break-after: always;
+  }
+
+  .content {
+    page-break-before: always;
+  }
+
+  .cover-uni, .cover-subject, .cover h1, .cover h2, .cover-meta, .cover-date {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.5cm;
+  }
+
+  .cover-rule { 
+    width: 6cm; 
+    border: none; 
+    border-top: 2px solid #0F6E56; 
+    margin: 1cm auto 1.5cm;
+  }
+
+  .cover h1 { font-size: 24pt; line-height: 1.2; }
+  .cover h2 { font-size: 16pt; margin-bottom: 2cm; }
+
+  @page cover { margin: 0; @bottom-right { content: ""; } }
+  .cover-uni { font-size: 13pt; color: #555; margin-bottom: 0.3cm; }
+  .cover-subject { font-size: 12pt; color: #555; margin-bottom: 1.5cm; }
+  .cover-rule { width: 6cm; border: none; border-top: 2px solid #0F6E56; margin: 0 auto 1.5cm; }
+  .cover h1 { font-size: 22pt; color: #0F6E56; margin: 0 0 0.4cm; }
+  .cover h2 { font-size: 14pt; font-weight: normal; color: #333; margin: 0 0 1.8cm; }
+  .cover-meta { font-size: 10.5pt; color: #555; line-height: 1.8; }
+  .cover-date { margin-top: 1.2cm; font-size: 10pt; color: #888; }
+
+  /* --- TOC --- */
+  .toc-page { page-break-before: always; }
+  .toc-page h2 { font-size: 14pt; color: #0F6E56; border-bottom: 1.5px solid #0F6E56; padding-bottom: 4px; margin-bottom: 1em; }
+  .toc-entry { display: flex; justify-content: space-between; padding: 3px 0; font-size: 10.5pt; }
+  .toc-entry a { color: #1a1a1a; text-decoration: none; }
+  .toc-dots { flex: 1; border-bottom: 1px dotted #bbb; margin: 0 8px 3px; }
+  .toc-num { color: #555; }
+
+  /* --- Body --- */
+  .content { page-break-before: always; }
+
+  h1.sec { font-size: 15pt; color: #0F6E56; border-bottom: 1.5px solid #0F6E56; padding-bottom: 4px; margin-top: 1.4em; page-break-after: avoid; }
+  h2.sec { font-size: 12.5pt; color: #222; margin-top: 1.2em; page-break-after: avoid; }
+  h3.sec { font-size: 11pt; color: #333; margin-top: 1em; page-break-after: avoid; }
+
+  p { margin: 0.4em 0 0.7em; text-align: justify; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 10pt; margin: 0.8em 0 1em; page-break-inside: avoid; }
+  thead tr { background: #0F6E56; color: white; }
+  thead th { padding: 6px 10px; text-align: left; }
+  tbody tr:nth-child(even) { background: #f3faf7; }
+  tbody td { padding: 5px 10px; border-bottom: 1px solid #ddd; }
+
+  /* Code / header diagram */
+  .code-block {
+    background: #f6f8fa;
+    border: 1px solid #ddd;
+    border-left: 3px solid #0F6E56;
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-family: "DejaVu Sans Mono", monospace;
+    font-size: 9pt;
+    line-height: 1.5;
+    white-space: pre;
+    page-break-inside: avoid;
+    overflow-wrap: break-word;
+  }
+
+  /* Figures */
+  .figure { margin: 1em 0 1.4em; text-align: center; page-break-inside: avoid; }
+  .figure svg { max-width: 100%; height: auto; }
+  .caption { font-size: 9.5pt; color: #555; font-style: italic; margin-top: 4px; }
+
+  /* Note / callout boxes */
+  .note {
+    background: #fffbe6;
+    border-left: 3px solid #e6a817;
+    padding: 8px 12px;
+    margin: 0.8em 0;
+    font-size: 10pt;
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* Field table in header spec */
+  .field-table th { background: #3C3489; }
+  .field-table tbody tr:nth-child(even) { background: #f5f4ff; }
+
+  /* Inline code */
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 9.5pt; background: #f0f0f0; padding: 1px 4px; border-radius: 3px; }
+
+  /* Opcode pill */
+  .op { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; background: #e8f5ee; color: #0F6E56; padding: 1px 5px; border-radius: 3px; border: 1px solid #b2ddc8; white-space: nowrap; }
+
+  ul, ol { margin: 0.3em 0 0.7em 1.4em; }
+  li { margin-bottom: 0.3em; }
+
+  strong { color: #111; }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ COVER -->
+<div class="cover">
+  <div class="cover-uni">Facultad de Ingeniería — Universidad de Buenos Aires</div>
+  <div class="cover-subject">Introducción a los Sistemas Distribuidos (75.43)</div>
+  <hr class="cover-rule"/>
+  <h1>FRDT — File Reliable Data Transfer</h1>
+  <h2>Trabajo Práctico N° 1: File Transfer</h2>
+  <div class="cover-meta">
+    Topología simulada con Mininet · Pérdida del 10 %<br/>
+    Stop &amp; Wait · Selective Repeat
+  </div>
+  <div class="cover-date">Mayo de 2026</div>
+</div>
+
+<!-- ================================================================ TOC -->
+<div class="toc-page">
+  <h2>Índice</h2>
+  <div class="toc-entry"><a href="#introduccion">1. Introducción</a><span class="toc-dots"></span><span class="toc-num">2</span></div>
+  <div class="toc-entry"><a href="#hipotesis">2. Hipótesis y suposiciones realizadas</a><span class="toc-dots"></span><span class="toc-num">2</span></div>
+  <div class="toc-entry"><a href="#implementacion">3. Implementación</a><span class="toc-dots"></span><span class="toc-num">2</span></div>
+  <div class="toc-entry"><a href="#pruebas">4. Pruebas</a><span class="toc-dots"></span><span class="toc-num">4</span></div>
+  <div class="toc-entry"><a href="#preguntas">5. Preguntas a responder</a><span class="toc-dots"></span><span class="toc-num">5</span></div>
+  <div class="toc-entry"><a href="#dificultades">6. Dificultades encontradas</a><span class="toc-dots"></span><span class="toc-num">6</span></div>
+  <div class="toc-entry"><a href="#conclusion">7. Conclusión</a><span class="toc-dots"></span><span class="toc-num">6</span></div>
+</div>
+
+<!-- ================================================================ CONTENT -->
+<div class="content">
+
+<!-- 1. INTRODUCCIÓN -->
+<h1 class="sec" id="introduccion">1. Introducción</h1>
+<p>
+  Este trabajo implementa <strong>FRDT</strong> (<em>File Reliable Data Transfer</em>), una aplicación de
+  transferencia de archivos confiable sobre UDP. Se implementaron dos operaciones
+  (<strong>UPLOAD</strong> y <strong>DOWNLOAD</strong>) y dos protocolos de recuperación de errores:
+  <strong>Stop &amp; Wait</strong> y <strong>Selective Repeat</strong>. Las pruebas se realizaron en una
+  topología simulada con Mininet con un 10&nbsp;% de pérdida de paquetes en el enlace
+  <code>h2 &lt;-&gt; s1</code>.
+</p>
+
+<!-- 2. HIPÓTESIS -->
+<h1 class="sec" id="hipotesis">2. Hipótesis y suposiciones realizadas</h1>
+<ul>
+  <li>Por defecto, el cliente se conecta a <code>10.0.0.2:65535</code>. Cada cliente es redirigido a un puerto efímero asignado por el SO para la transferencia.</li>
+  <li>El servidor escucha en todas las interfaces <code>0.0.0.0</code> en el puerto configurado vía <code>-p</code> (default: 65535), ambos valores son modificables por línea de comandos.</li>
+  <li>Payload máximo por segmento: <strong>1442 bytes</strong> (MTU de Ethernet menos headers IP + UDP + RFTP).</li>
+  <li>El checksum CRC32 se trunca a 16 bits para caber en el header; se considera suficiente para el entorno de pruebas.</li>
+  <li>No se implementa control de congestión.</li>
+  <li>El cierre de conexión no garantiza entrega del último ACK (problema de los dos ejércitos): se limita a 3 reintentos.</li>
+  <li>El servidor no impone un límite explícito de clientes concurrentes: lanza un hilo por cada conexión entrante sin restricción.</li>
+</ul>
+
+<!-- 3. IMPLEMENTACIÓN -->
+<h1 class="sec" id="implementacion">3. Implementación</h1>
+
+<h2 class="sec">3.1 Protocolo RFTP — Header (16 bytes, Big-Endian)</h2>
+<div class="code-block">  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |    Opcode     |                    Padding                    |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |                        Sequence Number                        |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |                          Window Size                          |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |            Checksum           |         Payload Length        |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</div>
+
+<table class="field-table">
+  <thead><tr><th>Campo</th><th>Tamaño</th><th>Descripción</th></tr></thead>
+  <tbody>
+    <tr><td><code>Opcode</code></td><td>1 B</td><td>Tipo de operación: <span class="op">OP_UPLOAD</span> <span class="op">OP_DOWNLOAD</span> <span class="op">OP_DATA</span> <span class="op">OP_ACK</span> <span class="op">OP_END</span> <span class="op">OP_ERROR</span></td></tr>
+    <tr><td><code>Padding</code></td><td>3 B</td><td>Alineación de memoria</td></tr>
+    <tr><td><code>Sequence Number</code></td><td>4 B</td><td>Número de secuencia (hasta 2<sup>32</sup>)</td></tr>
+    <tr><td><code>Window Size</code></td><td>4 B</td><td>Tamaño de ventana negociado en handshake</td></tr>
+    <tr><td><code>Checksum</code></td><td>2 B</td><td>CRC32 truncado a 16 bits sobre header + payload</td></tr>
+    <tr><td><code>Payload Length</code></td><td>2 B</td><td>Longitud del payload en bytes</td></tr>
+  </tbody>
+</table>
+
+<h2 class="sec">3.2 Flujo de conexión — UPLOAD</h2>
+<p>
+  En la operación <strong>UPLOAD</strong> el cliente envía el archivo al servidor. El servidor recibe
+  la solicitud en el socket de bienvenida (<code>:65535</code>), lanza un hilo dedicado con un
+  puerto efímero y confirma con un <span class="op">OP_ACK</span> que incluye el tamaño de ventana negociado.
+  A partir de ese punto toda la transferencia ocurre entre el cliente y el hilo del servidor.
+</p>
+
+<div class="figure">
+<svg width="680" viewBox="0 0 680 470" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="arrow-up" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+<rect x="40" y="20" width="180" height="44" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#085041" x="130" y="47" text-anchor="middle">Cliente (h1)</text>
+<rect x="460" y="20" width="180" height="44" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#3C3489" x="550" y="47" text-anchor="middle">Servidor (h2)</text>
+<line x1="130" y1="64" x2="130" y2="448" stroke="#aaa" stroke-width="0.5" stroke-dasharray="4 4"/>
+<line x1="550" y1="64" x2="550" y2="448" stroke="#aaa" stroke-width="0.5" stroke-dasharray="4 4"/>
+<text font-family="monospace" font-size="12" fill="#888" x="550" y="82" text-anchor="middle">:65535</text>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="105" text-anchor="middle">OP_START_UPLOAD</text>
+<line x1="140" y1="116" x2="538" y2="116" stroke="#555" stroke-width="1" marker-end="url(#arrow-up)"/>
+<text font-family="monospace" font-size="12" fill="#666" x="340" y="130" text-anchor="middle">protocolo · tamaño · nombre</text>
+<rect x="454" y="148" width="184" height="28" rx="6" fill="none" stroke="#aaa" stroke-width="0.5" stroke-dasharray="3 3"/>
+<text font-family="monospace" font-size="12" fill="#888" x="546" y="166" text-anchor="middle">nuevo hilo · puerto efímero</text>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="194" text-anchor="middle">OP_ACK</text>
+<line x1="540" y1="205" x2="142" y2="205" stroke="#555" stroke-width="1" marker-end="url(#arrow-up)"/>
+<text font-family="monospace" font-size="12" fill="#666" x="340" y="219" text-anchor="middle">window size</text>
+<rect x="50" y="232" width="576" height="118" rx="6" fill="none" stroke="#aaa" stroke-width="0.5" stroke-dasharray="3 3"/>
+<text font-family="monospace" font-size="12" fill="#999" x="68" y="250">x N segmentos</text>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="267" text-anchor="middle">OP_DATA</text>
+<line x1="140" y1="278" x2="538" y2="278" stroke="#555" stroke-width="1" marker-end="url(#arrow-up)"/>
+<text font-family="monospace" font-size="12" fill="#666" x="340" y="292" text-anchor="middle">seq_num · chunk &lt;= 1442 B</text>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="320" text-anchor="middle">OP_ACK</text>
+<line x1="540" y1="331" x2="142" y2="331" stroke="#555" stroke-width="1" marker-end="url(#arrow-up)"/>
+<text font-family="monospace" font-size="12" fill="#666" x="340" y="345" text-anchor="middle">seq_num</text>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="382" text-anchor="middle">OP_END</text>
+<line x1="140" y1="393" x2="538" y2="393" stroke="#555" stroke-width="1" marker-end="url(#arrow-up)"/>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="422" text-anchor="middle">OP_ACK</text>
+<line x1="540" y1="433" x2="142" y2="433" stroke="#555" stroke-width="1" marker-end="url(#arrow-up)"/>
+</svg>
+  <div class="caption">Figura 1 — Diagrama de secuencia UPLOAD</div>
+</div>
+
+<h2 class="sec">3.3 Flujo de conexión — DOWNLOAD</h2>
+<p>
+  En la operación <strong>DOWNLOAD</strong> el cliente solicita un archivo y es el servidor quien
+  envía los segmentos de datos. El ACK del handshake incluye adicionalmente el tamaño del
+  archivo, permitiendo al cliente reservar espacio antes de iniciar la recepción.
+</p>
+
+<div class="figure">
+<svg width="680" viewBox="0 0 680 470" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="arrow-dn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+<rect x="40" y="20" width="180" height="44" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#085041" x="130" y="47" text-anchor="middle">Cliente (h1)</text>
+<rect x="460" y="20" width="180" height="44" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#3C3489" x="550" y="47" text-anchor="middle">Servidor (h2)</text>
+<line x1="130" y1="64" x2="130" y2="448" stroke="#aaa" stroke-width="0.5" stroke-dasharray="4 4"/>
+<line x1="550" y1="64" x2="550" y2="448" stroke="#aaa" stroke-width="0.5" stroke-dasharray="4 4"/>
+<text font-family="monospace" font-size="12" fill="#888" x="550" y="82" text-anchor="middle">:65535</text>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="105" text-anchor="middle">OP_START_DOWNLOAD</text>
+<line x1="140" y1="116" x2="538" y2="116" stroke="#555" stroke-width="1" marker-end="url(#arrow-dn)"/>
+<text font-family="monospace" font-size="12" fill="#666" x="340" y="130" text-anchor="middle">protocolo · nombre</text>
+<rect x="454" y="148" width="184" height="28" rx="6" fill="none" stroke="#aaa" stroke-width="0.5" stroke-dasharray="3 3"/>
+<text font-family="monospace" font-size="12" fill="#888" x="546" y="166" text-anchor="middle">nuevo hilo · puerto efímero</text>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="194" text-anchor="middle">OP_ACK</text>
+<line x1="540" y1="205" x2="142" y2="205" stroke="#555" stroke-width="1" marker-end="url(#arrow-dn)"/>
+<text font-family="monospace" font-size="12" fill="#666" x="340" y="219" text-anchor="middle">window size · tamaño del archivo</text>
+<rect x="50" y="232" width="576" height="118" rx="6" fill="none" stroke="#aaa" stroke-width="0.5" stroke-dasharray="3 3"/>
+<text font-family="monospace" font-size="12" fill="#999" x="68" y="250">x N segmentos</text>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="267" text-anchor="middle">OP_DATA</text>
+<line x1="540" y1="278" x2="142" y2="278" stroke="#555" stroke-width="1" marker-end="url(#arrow-dn)"/>
+<text font-family="monospace" font-size="12" fill="#666" x="340" y="292" text-anchor="middle">seq_num · chunk &lt;= 1442 B</text>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="320" text-anchor="middle">OP_ACK</text>
+<line x1="140" y1="331" x2="538" y2="331" stroke="#555" stroke-width="1" marker-end="url(#arrow-dn)"/>
+<text font-family="monospace" font-size="12" fill="#666" x="340" y="345" text-anchor="middle">seq_num</text>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="382" text-anchor="middle">OP_END</text>
+<line x1="540" y1="393" x2="142" y2="393" stroke="#555" stroke-width="1" marker-end="url(#arrow-dn)"/>
+<text font-family="monospace" font-size="14" font-weight="500" fill="#222" x="340" y="422" text-anchor="middle">OP_ACK</text>
+<line x1="140" y1="433" x2="538" y2="433" stroke="#555" stroke-width="1" marker-end="url(#arrow-dn)"/>
+</svg>
+  <div class="caption">Figura 2 — Diagrama de secuencia DOWNLOAD</div>
+</div>
+
+<h2 class="sec">3.4 Manejo de errores</h2>
+<p>
+  Ante ciertas condiciones de error el servidor responde con un segmento
+  <span class="op">OP_ERROR</span> cuyo payload transporta un mensaje descriptivo:
+</p>
+<table>
+  <thead><tr><th>Condición</th><th>Payload enviado</th><th>Mecanismo</th></tr></thead>
+  <tbody>
+    <tr><td>Archivo no encontrado</td><td><code>FILE_NOT_FOUND</code></td><td>El servidor responde con <span class="op">OP_ERROR</span> antes de iniciar la transferencia.</td></tr>
+    <tr><td>Sin espacio en disco</td><td><code>El servidor no tiene espacio disponible</code></td><td>El servidor responde con <span class="op">OP_ERROR</span> antes de iniciar la transferencia.</td></tr>
+    <tr><td>Checksum inválido</td><td>—</td><td>El paquete es descartado silenciosamente por el receptor; no se envía <span class="op">OP_ERROR</span>. La confiabilidad se delega al mecanismo de retransmisión por timeout del protocolo activo (SW o SR).</td></tr>
+  </tbody>
+</table>
+
+<!-- 4. PRUEBAS -->
+<h1 class="sec" id="pruebas">4. Pruebas</h1>
+
+<p>
+  Topología: <code>h1 (cliente) — s1 — h2 (servidor)</code>, con 10&nbsp;% de pérdida en el enlace
+  <code>h2 — s1</code>.
+</p>
+
+<div class="note">
+  Completar sección...
+</div>
+
+<!-- 5. PREGUNTAS -->
+<h1 class="sec" id="preguntas">5. Preguntas a responder</h1>
+
+<h2 class="sec">1. Arquitectura Cliente-Servidor</h2>
+<p>
+  En la arquitectura cliente-servidor existe un proceso servidor siempre activo que espera
+  solicitudes entrantes en una dirección y puerto conocidos. Los clientes inician la comunicación
+  enviando peticiones; el servidor las atiende y responde. En este trabajo el servidor escucha en
+  un puerto fijo (<code>:65535</code>) y delega cada conexión a un hilo independiente con su
+  propio socket, permitiendo atender múltiples clientes de forma concurrente.
+</p>
+
+<h2 class="sec">2. Función de un protocolo de capa de aplicación</h2>
+<p>
+  Un protocolo de capa de aplicación define el formato de los mensajes intercambiados, los tipos
+  de operaciones posibles y el comportamiento esperado de cada extremo. En este caso, RFTP
+  especifica los opcodes, el formato binario del header de 16 bytes y el contenido del payload
+  en cada etapa de la comunicación (handshake, transferencia y cierre).
+</p>
+
+<h2 class="sec">3. Protocolo de aplicación desarrollado</h2>
+<p>
+  RFTP opera sobre UDP con tres fases bien diferenciadas:
+</p>
+<ol>
+  <li><strong>Handshake:</strong> el cliente envía <span class="op">OP_START_UPLOAD</span> o
+      <span class="op">OP_START_DOWNLOAD</span> al socket de bienvenida. El servidor lanza un
+      hilo dedicado, asigna un puerto efímero y responde con <span class="op">OP_ACK</span>
+      incluyendo el tamaño de ventana negociado.</li>
+  <li><strong>Transferencia:</strong> intercambio de segmentos <span class="op">OP_DATA</span>
+      con su correspondiente <span class="op">OP_ACK</span>. Según el protocolo elegido se
+      aplica Stop &amp; Wait o Selective Repeat.</li>
+  <li><strong>Cierre:</strong> el emisor envía <span class="op">OP_END</span>; el receptor
+      confirma con <span class="op">OP_ACK</span>. Se limita a 3 reintentos para evitar
+      bloqueo indefinido.</li>
+</ol>
+<p>
+  El checksum CRC32 truncado a 16 bits cubre el header completo más el payload, permitiendo
+  detectar corrupción. Ante error, el servidor responde con <span class="op">OP_ERROR</span>.
+</p>
+
+<h2 class="sec">4. TCP vs UDP</h2>
+<p>
+  <strong>TCP</strong> ofrece entrega garantizada, orden de llegada, control de flujo y control
+  de congestión, a costa de mayor latencia y overhead (establecimiento de conexión, retransmisiones
+  automáticas, etc.). <strong>UDP</strong> es un servicio de datagramas sin conexión: no garantiza
+  entrega ni orden, pero tiene menor latencia y overhead mínimo.
+</p>
+<p>
+  UDP es apropiado cuando la aplicación puede tolerar pérdidas (streaming en tiempo real) o cuando
+  implementa sus propios mecanismos de confiabilidad.
+</p>
+
+<h2 class="sec">5. Control de congestión</h2>
+<p>
+  El protocolo <strong>no implementa control de congestión</strong>. El tamaño de ventana es
+  estático: se negocia durante el handshake y se calcula en el servidor como
+  <code>SV_MAX_WIN // SV_MAX_CLIENTS</code> (por defecto 40 segmentos).
+</p>
+
+<h2 class="sec">6. ¿Cuál protocolo es más rápido?</h2>
+<p>
+  En teoría, <strong>Selective Repeat</strong> debería ser más rápido en presencia de pérdidas,
+  ya que retransmite únicamente los segmentos perdidos y no toda la ventana.
+  Sin embargo, en esta implementación concreta el envío de segmentos es
+  <strong>secuencial</strong>: <code>FRDTSocket.send()</code> itera sobre los chunks y llama a
+  <code>p_strategy.send_data()</code> de a un segmento por vez, esperando el ACK antes de
+  continuar con el siguiente. Por lo tanto, no existe un pipeline real de múltiples segmentos
+  en vuelo simultáneamente.
+</p>
+<p>
+  La ventaja práctica de SR en este código se reduce a que cada segmento tiene su propio timer
+  independiente: si un paquete se pierde, solo ese segmento es retransmitido sin afectar al
+  resto. Stop &amp; Wait comparte esta característica por diseño (ventana de 1), pero reinicia
+  el mismo contador para cada intento. Dado que ambos protocolos operan de forma secuencial
+  en esta implementación, la diferencia de rendimiento entre ellos será modesta y dependerá
+  principalmente del comportamiento del timeout bajo condiciones de pérdida.
+</p>
+
+<!-- 6. DIFICULTADES -->
+<h1 class="sec" id="dificultades">6. Dificultades encontradas</h1>
+<ul>
+  <li>
+    <strong>Cierre de conexión:</strong> ambas partes podían
+    quedar esperando indefinidamente un ACK final que quizás nunca llegue. Se resolvió limitando
+    los reintentos del <span class="op">OP_END</span> a 3 intentos antes de considerar la
+    conexión cerrada.
+  </li>
+</ul>
+
+<!-- 7. CONCLUSIÓN -->
+<h1 class="sec" id="conclusion">7. Conclusión</h1>
+<p>
+  Se implementó exitosamente una aplicación de transferencia de archivos confiable sobre UDP con
+  soporte para múltiples clientes concurrentes y dos protocolos RDT. Se permitió
+  comprender en detalle los mecanismos que TCP provee de forma transparente: numeración de
+  secuencia, retransmisión por timeout, control de flujo con ventana deslizante y detección
+  de errores por checksum.
+</p>
+<p>
+  Selective Repeat ofrece ventajas teóricas claras sobre Stop &amp; Wait bajo pérdidas, dado que
+  retransmite solo los segmentos perdidos. En la implementación realizada, sin embargo, el envío
+  es secuencial (un segmento a la vez), por lo que el beneficio se materializa principalmente en
+  la independencia de los timers por segmento más que en un pipeline de múltiples paquetes en
+  vuelo. Stop &amp; Wait sigue siendo una referencia válida de simplicidad y correctitud,
+  especialmente para archivos pequeños.
+</p>
+
+</div><!-- .content -->
+</body>
+</html>
