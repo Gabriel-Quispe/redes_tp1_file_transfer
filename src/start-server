@@ -32,7 +32,8 @@ def welcome_client(address,rdt_segment:Segment,drive_dir):
         logger.info(f"Cliente {address[0]} redirigido al puerto {address[1]}")
         show_protocol_info(protocol_op)
         
-        rdt_sock = FRDTSocket(address,protocol_op)
+        # El server crea un socket con un timeout especifico
+        rdt_sock = FRDTSocket(address,protocol_op,const.TIMEOUT)
         offset=0
         if rdt_segment.opcode == const.OP_START_UPLOAD:
             offset = struct.calcsize("!BQ")
@@ -139,7 +140,7 @@ if __name__ == "__main__":
         raw_data, addr = welcome_socket.recvfrom(buff_size)
         logger.info(f"Cliente {addr}")
         try:
-            segment = Segment.unpack(raw_data)            
+            segment = Segment.unpack(raw_data)
             # Si aparece un nuevo request de conexión
             if segment.opcode in [const.OP_START_UPLOAD, const.OP_START_DOWNLOAD]:                
                 #creo un nuevo hilo para el cliente
@@ -150,7 +151,9 @@ if __name__ == "__main__":
                 t.daemon = True # Para cerrar el sv aunque haya hilos
                 t.start()
             else:
-                logger.debug(f"Paquete ignorado {addr} con opcode {segment.opcode}")                
+                logger.debug(f"Paquete ignorado {addr} con opcode {segment.opcode}")
+                print("Threads activos:", len(threading.enumerate()))
+
         except Exception as e:
             logger.error(f"Error procesando paquete en el server master: {e}")
             

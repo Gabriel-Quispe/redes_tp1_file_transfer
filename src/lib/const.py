@@ -1,5 +1,5 @@
 HEADER_FORMAT = "!B3xIIHH" #Tamaño del header
-SV_MAX_WIN= 400
+SV_MAX_WIN= 320
 SV_MAX_CLIENTS=10
 SV_CLIENT_MIN_WIN=4
 
@@ -16,5 +16,5 @@ PROTOCOL_SR  = 2 #Selective Repeat
 
 # Para el sv 
 MAX_PAYLOAD_SIZE = 1442
-TIMEOUT          = 0.055
+TIMEOUT          = 0.005
 PORT=65535

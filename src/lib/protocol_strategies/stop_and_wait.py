@@ -18,8 +18,7 @@ class StopAndWait(ProtocolStrategy):
         retries = 0
         while retries<max_retry:
             #acá fuerzo que se use este protocolo
-            segment.seq_num=self.bit_sw
-            
+            segment.seq_num=self.bit_sw            
             self.socket.sendto(segment.pack(), self.address)
             try:
                 self.socket.settimeout(const.TIMEOUT)
@@ -73,3 +72,6 @@ class StopAndWait(ProtocolStrategy):
                 retries+=1
                 continue
         return (const.OP_ERROR, b"Timeout: Maximo de reintentos alcanzado")
+    def stop_strategy(self):
+        self.active=False
+        self.closing=True
