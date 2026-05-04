@@ -3,7 +3,9 @@ import socket as sckt
 import lib.const as const
 from lib.segment import Segment
 from lib.logger import logger
+
 class ProtocolStrategy:
+        
     def __init__(self,address,socket,timeout=const.TIMEOUT):
         self.timeout=timeout
         self.receive_tam=4096 #Esto es más que un paq, por seguridad
@@ -18,37 +20,31 @@ class ProtocolStrategy:
         self.socket:sckt.socket=socket
         self.wsize=const.SV_MAX_WIN
         self.active=True
+        self.closing = False
     def set_window(self,tam:int)->None:
         self.wsize=tam
     def send_data(self, segment:Segment, max_retry:int=10)-> Optional[Segment]:
         pass
-    def update_timeout(self,new_timeout):
-        if new_timeout<=0:
-            return
-        self.timeout=new_timeout
-    def do_handshake(self,segment: Segment)-> Optional[Segment]:        
-        """Deprecado: esto va en el socket, no en la strategy"""
-        while True:
-            # intentamos enviar el paquete de inicio
-            # hasta que alguien responda
-            self.socket.sendto(segment.pack(), self.address)            
-            try:
-                self.socket.settimeout(const.TIMEOUT)
-                raw_data, hilo_address = self.socket.recvfrom(self.receive_tam)
-                recv_response = Segment.unpack(raw_data)
-                
-                #si el receptor respondio al handshake!
-                if recv_response.opcode == const.OP_ACK:
-                    # actualizamos el nuevo address (provisto por el server)
-                    self.address = hilo_address
-                    return recv_response                
-                if recv_response.opcode == const.OP_ERROR:
-                    logger.error(f"Error en handshake! {recv_response.payload}")
-                    raise ConnectionAbortedError(recv_response.payload.decode())
-            except (sckt.timeout, ValueError):
-                continue
     def receive_data(self,max_retry=10) -> Tuple[int, Optional[bytes]]:
         pass
     def stop_strategy(self):
         """Para limpiar hilos y demas cosas en cada estrategia"""
         pass
+    def is_finished(self):
+        pass
+    def set_timeout(self, rtt):
+        """Solo se llama en el handshake
+        inspirado en RFC 793: Página 40 sobre Retransmission Timeout
+        SRTT = ( ALPHA * SRTT ) + ((1-ALPHA) * RTT)
+
+        and based on this, compute the retransmission timeout (RTO) as:
+
+        RTO = min[UBOUND,max[LBOUND,(BETA*SRTT)]]
+        """
+        lbound = const.TIMEOUT 
+        ubound = 10.0   # 1s
+        beta = 2
+        rto = min(ubound, max(lbound, beta * rtt)) #Retransmission timeout
+        # nuevo_timeout = (1-a) * old_timeout + a*rto
+        self.timeout = 0.8 * self.timeout + 0.2*rto
+        logger.debug(f"RTT: {rtt*1000:.1f}ms → RTO: {rto*1000:.1f}ms")
