@@ -179,7 +179,7 @@
 <h1 class="sec" id="hipotesis">2. Hipótesis y suposiciones realizadas</h1>
 <ul>
   <li>Por defecto, el cliente se conecta a <code>10.0.0.2:65535</code>. Cada cliente es redirigido a un puerto efímero asignado por el SO para la transferencia.</li>
-  <li>El servidor siempre escucha en todas las interfaces (<code>0.0.0.0</code>) en el puerto <code>65535</code> (por defecto). Los argumentos <code>-H</code> y <code>-p</code> son aceptados por el parser pero no se utilizan para configurar el bind; solo <code>-s</code>/<code>--storage</code> es efectivo.</li>
+  <li>El servidor siempre escucha en todas las interfaces (<code>0.0.0.0</code>) en el puerto <code>65535</code> (ambos hardcodeados). Los argumentos <code>-H</code> y <code>-p</code> son aceptados por el parser pero no se utilizan para configurar el bind; solo <code>-s</code>/<code>--storage</code> es efectivo.</li>
   <li>Payload máximo por segmento: <strong>1442 bytes</strong> (MTU de Ethernet menos headers IP + UDP + RFTP).</li>
   <li>El checksum CRC32 se trunca a 16 bits para caber en el header; se considera suficiente para el entorno de pruebas.</li>
   <li>No se implementa control de congestión.</li>
@@ -386,9 +386,20 @@
 
 <h2 class="sec">5. Control de congestión</h2>
 <p>
-  El protocolo <strong>no implementa control de congestión</strong>. El tamaño de ventana es
-  estático: se negocia durante el handshake y se calcula en el servidor como
-  <code>SV_MAX_WIN // SV_MAX_CLIENTS</code> (por defecto 32 segmentos).
+  El protocolo <strong>no implementa control de congestión</strong>, y esto es una decisión
+  de diseño justificada por el entorno de pruebas. La pérdida del 10&nbsp;% es arbitraria y
+  constante: está impuesta por el enlace (<code>TCLink loss=10</code> en Mininet) y no es
+  consecuencia de congestión en los hosts. Reducir el tamaño de ventana ante una pérdida
+  no mejoraría la situación, el paquete se perdería igual y ademas se ralentizaría la 
+  transmisión innecesariamente.
+</p>
+<p>
+  La pérdida modelada corresponde a un enlace de baja confiabilidad donde la causa del descarte
+  es la calidad del medio y no la saturación de los buffers.
+  Por lo que es más relevante el <strong>control de flujo</strong>: la
+  ventana se negocia en el handshake y se calcula en el servidor como
+  <code>SV_MAX_WIN // SV_MAX_CLIENTS</code> (por defecto 32 segmentos), evitando saturar
+  al receptor cuando hay múltiples clientes concurrentes.
 </p>
 
 <h2 class="sec">6. ¿Cuál protocolo es más rápido?</h2>
