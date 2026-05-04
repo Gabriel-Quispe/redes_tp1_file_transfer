@@ -136,24 +136,28 @@ if __name__ == "__main__":
     welcome_socket.bind((sv_ip, sv_port))
     logger.info(f"Servidor iniciado!")
     logger.info(f"Esperando conexiones en el puerto {sv_port}")
-    while True:
-        raw_data, addr = welcome_socket.recvfrom(buff_size)
-        logger.info(f"Cliente {addr}")
-        try:
-            segment = Segment.unpack(raw_data)
-            # Si aparece un nuevo request de conexión
-            if segment.opcode in [const.OP_START_UPLOAD, const.OP_START_DOWNLOAD]:                
-                #creo un nuevo hilo para el cliente
-                t = threading.Thread(
-                    target=welcome_client, 
-                    args=(addr, segment, drive_dir)
-                )
-                t.daemon = True # Para cerrar el sv aunque haya hilos
-                t.start()
-            else:
-                logger.debug(f"Paquete ignorado {addr} con opcode {segment.opcode}")
-                print("Threads activos:", len(threading.enumerate()))
+    try:
+        while True:
+            raw_data, addr = welcome_socket.recvfrom(buff_size)
+            logger.info(f"Cliente {addr}")
+            try:
+                segment = Segment.unpack(raw_data)
+                # Si aparece un nuevo request de conexión
+                if segment.opcode in [const.OP_START_UPLOAD, const.OP_START_DOWNLOAD]:                
+                    #creo un nuevo hilo para el cliente
+                    t = threading.Thread(
+                        target=welcome_client, 
+                        args=(addr, segment, drive_dir)
+                    )
+                    t.daemon = True # Para cerrar el sv aunque haya hilos
+                    t.start()
+                else:
+                    logger.debug(f"Paquete ignorado {addr} con opcode {segment.opcode}")
+                    print("Threads activos:", len(threading.enumerate()))
 
-        except Exception as e:
-            logger.error(f"Error procesando paquete en el server master: {e}")
-            
+            except Exception as e:
+                logger.error(f"Error procesando paquete en el server master: {e}")
+    except KeyboardInterrupt:
+        logger.info("Servidor apagado.")
+    finally:
+        welcome_socket.close()
