@@ -179,7 +179,7 @@
 <h1 class="sec" id="hipotesis">2. Hipótesis y suposiciones realizadas</h1>
 <ul>
   <li>Por defecto, el cliente se conecta a <code>10.0.0.2:65535</code>. Cada cliente es redirigido a un puerto efímero asignado por el SO para la transferencia.</li>
-  <li>El servidor escucha en todas las interfaces <code>0.0.0.0</code> en el puerto configurado vía <code>-p</code> (default: 65535), ambos valores son modificables por línea de comandos.</li>
+  <li>El servidor siempre escucha en todas las interfaces (<code>0.0.0.0</code>) en el puerto <code>65535</code> (por defecto). Los argumentos <code>-H</code> y <code>-p</code> son aceptados por el parser pero no se utilizan para configurar el bind; solo <code>-s</code>/<code>--storage</code> es efectivo.</li>
   <li>Payload máximo por segmento: <strong>1442 bytes</strong> (MTU de Ethernet menos headers IP + UDP + RFTP).</li>
   <li>El checksum CRC32 se trunca a 16 bits para caber en el header; se considera suficiente para el entorno de pruebas.</li>
   <li>No se implementa control de congestión.</li>
@@ -204,7 +204,7 @@
 <table class="field-table">
   <thead><tr><th>Campo</th><th>Tamaño</th><th>Descripción</th></tr></thead>
   <tbody>
-    <tr><td><code>Opcode</code></td><td>1 B</td><td>Tipo de operación: <span class="op">OP_UPLOAD</span> <span class="op">OP_DOWNLOAD</span> <span class="op">OP_DATA</span> <span class="op">OP_ACK</span> <span class="op">OP_END</span> <span class="op">OP_ERROR</span></td></tr>
+    <tr><td><code>Opcode</code></td><td>1 B</td><td>Tipo de operación: <span class="op">OP_START_UPLOAD</span> <span class="op">OP_START_DOWNLOAD</span> <span class="op">OP_DATA</span> <span class="op">OP_ACK</span> <span class="op">OP_END</span> <span class="op">OP_ERROR</span></td></tr>
     <tr><td><code>Padding</code></td><td>3 B</td><td>Alineación de memoria</td></tr>
     <tr><td><code>Sequence Number</code></td><td>4 B</td><td>Número de secuencia (hasta 2<sup>32</sup>)</td></tr>
     <tr><td><code>Window Size</code></td><td>4 B</td><td>Tamaño de ventana negociado en handshake</td></tr>
@@ -262,8 +262,9 @@
 <h2 class="sec">3.3 Flujo de conexión — DOWNLOAD</h2>
 <p>
   En la operación <strong>DOWNLOAD</strong> el cliente solicita un archivo y es el servidor quien
-  envía los segmentos de datos. El ACK del handshake incluye adicionalmente el tamaño del
-  archivo, permitiendo al cliente reservar espacio antes de iniciar la recepción.
+  envía los segmentos de datos. El ACK del handshake incluye el tamaño del archivo en el payload,
+  permitiendo al cliente usarlo como condición de parada del loop de recepción
+  (<code>while bytes_received &lt; size</code>).
 </p>
 
 <div class="figure">
@@ -387,26 +388,31 @@
 <p>
   El protocolo <strong>no implementa control de congestión</strong>. El tamaño de ventana es
   estático: se negocia durante el handshake y se calcula en el servidor como
-  <code>SV_MAX_WIN // SV_MAX_CLIENTS</code> (por defecto 40 segmentos).
+  <code>SV_MAX_WIN // SV_MAX_CLIENTS</code> (por defecto 32 segmentos).
 </p>
 
 <h2 class="sec">6. ¿Cuál protocolo es más rápido?</h2>
 <p>
-  En teoría, <strong>Selective Repeat</strong> debería ser más rápido en presencia de pérdidas,
-  ya que retransmite únicamente los segmentos perdidos y no toda la ventana.
-  Sin embargo, en esta implementación concreta el envío de segmentos es
-  <strong>secuencial</strong>: <code>FRDTSocket.send()</code> itera sobre los chunks y llama a
-  <code>p_strategy.send_data()</code> de a un segmento por vez, esperando el ACK antes de
-  continuar con el siguiente. Por lo tanto, no existe un pipeline real de múltiples segmentos
-  en vuelo simultáneamente.
+  <strong>Selective Repeat</strong> es más rápido, especialmente bajo pérdidas. Su
+  <code>send_data()</code> retorna inmediatamente tras enviar cada segmento (sin esperar el ACK
+  correspondiente), por lo que <code>FRDTSocket.send()</code> inyecta segmentos en la red de
+  forma continua hasta llenar la ventana. Dos hilos de fondo gestionan de forma independiente
+  la recepción de ACKs (deslizando la ventana) y las retransmisiones por timeout, lo que permite
+  tener múltiples segmentos en vuelo simultáneamente. Solo se bloquea cuando la ventana está
+  completamente llena.
 </p>
 <p>
-  La ventaja práctica de SR en este código se reduce a que cada segmento tiene su propio timer
-  independiente: si un paquete se pierde, solo ese segmento es retransmitido sin afectar al
-  resto. Stop &amp; Wait comparte esta característica por diseño (ventana de 1), pero reinicia
-  el mismo contador para cada intento. Dado que ambos protocolos operan de forma secuencial
-  en esta implementación, la diferencia de rendimiento entre ellos será modesta y dependerá
-  principalmente del comportamiento del timeout bajo condiciones de pérdida.
+  Stop &amp; Wait, en cambio, tiene una ventana de tamaño 1: el emisor envía un segmento y
+  espera el ACK antes de continuar con el siguiente, lo que resulta en una utilización del
+  enlace proporcional a <code>1 / (1 + 2·a)</code> donde <code>a = RTT / tiempo de
+  transmisión</code>. Con pérdidas del 10&nbsp;%, cada retransmisión en SW detiene por completo
+  el flujo de datos, mientras que SR sólo retransmite el segmento perdido sin interrumpir los
+  demás.
+</p>
+<p>
+  En la práctica, para archivos grandes y con pérdidas, SR debería lograr un throughput
+  significativamente mayor. Para archivos muy pequeños o en condiciones de red ideales, la
+  diferencia es marginal.
 </p>
 
 <!-- 6. DIFICULTADES -->
@@ -430,12 +436,11 @@
   de errores por checksum.
 </p>
 <p>
-  Selective Repeat ofrece ventajas teóricas claras sobre Stop &amp; Wait bajo pérdidas, dado que
-  retransmite solo los segmentos perdidos. En la implementación realizada, sin embargo, el envío
-  es secuencial (un segmento a la vez), por lo que el beneficio se materializa principalmente en
-  la independencia de los timers por segmento más que en un pipeline de múltiples paquetes en
-  vuelo. Stop &amp; Wait sigue siendo una referencia válida de simplicidad y correctitud,
-  especialmente para archivos pequeños.
+  Selective Repeat ofrece ventajas claras sobre Stop &amp; Wait bajo pérdidas: mantiene múltiples
+  segmentos en vuelo simultáneamente gracias a sus hilos de fondo, retransmite solo los segmentos
+  perdidos y adapta el RTO dinámicamente con el algoritmo de Jacobson/Karn. Stop &amp; Wait sigue
+  siendo una referencia válida de simplicidad y correctitud, especialmente para archivos pequeños
+  o redes sin pérdidas.
 </p>
 
 </div><!-- .content -->
