@@ -3,7 +3,7 @@ import os
 import struct
 import lib.const as const
 from lib.logger import *
-from lib.rdt_socket import FRDTSocket
+from lib.rdt_socket import FRDTSocket, Role
 
 class FRDTClient:
     def __init__(self, description):
