@@ -23,6 +23,8 @@ class StopAndWait(ProtocolStrategy):
             try:
                 self.socket.settimeout(const.TIMEOUT)
                 raw_data, addr = self.socket.recvfrom(self.receive_tam)
+                if addr != self.address:
+                    continue
                 ack_pkt = Segment.unpack(raw_data)
 
                 if ack_pkt.opcode == const.OP_ACK and ack_pkt.seq_num == segment.seq_num:
