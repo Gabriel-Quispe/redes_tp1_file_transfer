@@ -1,0 +1,46 @@
+#!/bin/python
+import struct
+from lib.segment import Segment
+from lib.rdt_client import *
+import time
+from lib.logger import configure_logger,logger
+class FRDT_Upload(FRDTClient):
+    def __init__(self):
+        super().__init__("File Reliable Data Transfer")
+        self.parser.add_argument("-s", "--src",required=True,help="source file path")
+    
+    def run(self):
+        self.setup()
+        configure_logger(verbose=self.args.verbose,quiet=self.args.quiet)
+        if not os.path.exists(self.args.src):
+            logger.error(f"El archivo {self.args.src} no existe.")
+            return
+        size= os.path.getsize(self.args.src)
+        payload = struct.pack("!BQ", self.args.protocol, size) + self.args.name.encode()
+        try:
+            # Handshake
+            sv_response = self.rdt_sock.connect(const.OP_START_UPLOAD, payload)
+            if sv_response.opcode == const.OP_ERROR:
+                logger.error("Error en el servidor")
+                return
+            start_time = time.time()
+            # envio los datos
+            self.show_protocol_info(self.args.protocol)
+            
+            logger.info(f"Iniciando carga de archivo {self.args.src}")
+            
+            with open(self.args.src, "rb") as f:
+                #el socket rdt se encarga de crear los paquetes
+                self.rdt_sock.send(f.read())
+                final_time = time.time()-start_time
+                show_stats(final_time,size)
+            #estadisticas de tiempo y throughput   
+        except ConnectionError as e:
+            logger.error(f"Error intentando conectar: {e}")
+        except Exception as e:
+            logger.error(f"Error en la subida: {e}")
+        finally:
+            self.rdt_sock.close()
+
+if __name__ == "__main__":
+    FRDT_Upload().run()
