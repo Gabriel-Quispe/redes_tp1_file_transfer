@@ -131,6 +131,10 @@
   li { margin-bottom: 0.3em; }
 
   strong { color: #111; }
+
+  /* Test images */
+  .figure img { width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }
+  h3.test { font-size: 10.5pt; color: #0F6E56; margin: 1.2em 0 0.3em; font-weight: bold; page-break-after: avoid; }
 </style>
 </head>
 <body>
@@ -323,12 +327,93 @@
 <h1 class="sec" id="pruebas">4. Pruebas</h1>
 
 <p>
-  Topología: <code>h1 (cliente) — s1 — h2 (servidor)</code>, con 10&nbsp;% de pérdida en el enlace
-  <code>h2 — s1</code>.
+  Topología: <code>h1 (cliente) — s1 — h2 (servidor)</code>. Se realizaron pruebas bajo dos
+  configuraciones de pérdida (10&nbsp;% y 30&nbsp;%) y con archivos de tres tamaños distintos:
+  <strong>liviano</strong> (&lt;1&nbsp;MB), <strong>mediano</strong> (~3&nbsp;MB) y
+  <strong>pesado</strong> (6&nbsp;MB). En cada caso se compara Stop &amp; Wait contra
+  Selective Repeat, tanto para UPLOAD como para DOWNLOAD.
 </p>
 
-<div class="note">
-  Completar sección...
+<!-- ── 10 % ─────────────────────────────────────────────── -->
+<h2 class="sec">4.1 Pérdida del 10 %</h2>
+
+<h3 class="test">UPLOAD — Selective Repeat</h3>
+<div class="figure">
+  <img src="img/test_10%_upload_sr..png" alt="Upload SR 10%"/>
+  <div class="caption">Figura — UPLOAD con Selective Repeat, pérdida 10 %</div>
+</div>
+
+<h3 class="test">DOWNLOAD — Selective Repeat</h3>
+<div class="figure">
+  <img src="img/test_10%_download_sr.png" alt="Download SR 10%"/>
+  <div class="caption">Figura — DOWNLOAD con Selective Repeat, pérdida 10 %</div>
+</div>
+
+<!-- ── 30 % ─────────────────────────────────────────────── -->
+<h2 class="sec">4.2 Pérdida del 30 %</h2>
+
+<h3 class="test">UPLOAD — Stop &amp; Wait vs Selective Repeat</h3>
+
+<p>Archivo liviano:</p>
+<div class="figure">
+  <img src="img/test_30%_upload_sw_liviano.png" alt="Upload SW liviano 30%"/>
+  <div class="caption">Figura — UPLOAD Stop &amp; Wait, archivo liviano, pérdida 30 %</div>
+</div>
+<div class="figure">
+  <img src="img/test_30%_upload_sr_liviano.png" alt="Upload SR liviano 30%"/>
+  <div class="caption">Figura — UPLOAD Selective Repeat, archivo liviano, pérdida 30 %</div>
+</div>
+
+<p>Archivo mediano:</p>
+<div class="figure">
+  <img src="img/test_30%_upload_sw.png" alt="Upload SW mediano 30%"/>
+  <div class="caption">Figura — UPLOAD Stop &amp; Wait, archivo mediano, pérdida 30 %</div>
+</div>
+<div class="figure">
+  <img src="img/test_30%_upload_sr.png.png" alt="Upload SR mediano 30%"/>
+  <div class="caption">Figura — UPLOAD Selective Repeat, archivo mediano, pérdida 30 %</div>
+</div>
+
+<p>Archivo pesado (6&nbsp;MB):</p>
+<div class="figure">
+  <img src="img/test_30%_upload_sw_6mb.png" alt="Upload SW 6MB 30%"/>
+  <div class="caption">Figura — UPLOAD Stop &amp; Wait, archivo 6 MB, pérdida 30 %</div>
+</div>
+<div class="figure">
+  <img src="img/test_30%_upload_sr_6mb.png" alt="Upload SR 6MB 30%"/>
+  <div class="caption">Figura — UPLOAD Selective Repeat, archivo 6 MB, pérdida 30 %</div>
+</div>
+
+<h3 class="test">DOWNLOAD — Stop &amp; Wait vs Selective Repeat</h3>
+
+<p>Archivo liviano:</p>
+<div class="figure">
+  <img src="img/test_30%_download_sw_liviano.png" alt="Download SW liviano 30%"/>
+  <div class="caption">Figura — DOWNLOAD Stop &amp; Wait, archivo liviano, pérdida 30 %</div>
+</div>
+<div class="figure">
+  <img src="img/test_30%_download_sr_liviano.png" alt="Download SR liviano 30%"/>
+  <div class="caption">Figura — DOWNLOAD Selective Repeat, archivo liviano, pérdida 30 %</div>
+</div>
+
+<p>Archivo mediano:</p>
+<div class="figure">
+  <img src="img/test_30%_download_sw.png" alt="Download SW mediano 30%"/>
+  <div class="caption">Figura — DOWNLOAD Stop &amp; Wait, archivo mediano, pérdida 30 %</div>
+</div>
+<div class="figure">
+  <img src="img/test_30%_download_sr.png.png.png" alt="Download SR mediano 30%"/>
+  <div class="caption">Figura — DOWNLOAD Selective Repeat, archivo mediano, pérdida 30 %</div>
+</div>
+
+<p>Archivo pesado (6&nbsp;MB):</p>
+<div class="figure">
+  <img src="img/test_30%_download_sw_6mb.png" alt="Download SW 6MB 30%"/>
+  <div class="caption">Figura — DOWNLOAD Stop &amp; Wait, archivo 6 MB, pérdida 30 %</div>
+</div>
+<div class="figure">
+  <img src="img/test_30%_download_sr_6mb.png" alt="Download SR 6MB 30%"/>
+  <div class="caption">Figura — DOWNLOAD Selective Repeat, archivo 6 MB, pérdida 30 %</div>
 </div>
 
 <!-- 5. PREGUNTAS -->
