@@ -5,137 +5,168 @@ import socket
 import struct
 import time
 import lib.const as const
-from lib.rdt_socket import FRDTSocket
-from lib.logger import logger,configure_logger,show_stats
+from lib.rdt_socket import FRDTSocket, Role
+from lib.logger import logger, configure_logger, show_stats
 import threading
 from lib.segment import Segment
-import shutil # para validar espacio en disco del server
-sv_ip="0.0.0.0"
-sv_port=const.PORT
-buff_size=4096
+import shutil  # para validar espacio en disco del server
+
+sv_ip = "0.0.0.0"
+sv_port = const.PORT
+buff_size = 4096
+
 
 def show_protocol_info(protocol_op):
-    protocol_name:str=""
-    if protocol_op==const.PROTOCOL_SR:
-        protocol_name:str="Selective Repeat"
+    protocol_name: str = ""
+    if protocol_op == const.PROTOCOL_SR:
+        protocol_name: str = "Selective Repeat"
     else:
-        protocol_name:str="Stop n Wait"
+        protocol_name: str = "Stop n Wait"
     logger.info(protocol_name)
+
+
 # esto siempre se ejecuta en un nuevo hilo
-def welcome_client(address,rdt_segment:Segment,drive_dir):
+def welcome_client(address, rdt_segment: Segment, drive_dir):
     rdt_sock = None
-    
+
     try:
-        #extraigo los metadatos (applayer)        
+        # extraigo los metadatos (applayer)
         protocol_op = struct.unpack("!B", rdt_segment.payload[:1])[0]
         logger.info("")
         logger.info(f"Cliente {address[0]} redirigido al puerto {address[1]}")
         show_protocol_info(protocol_op)
-        
+
         # El server crea un socket con un timeout especifico
-        rdt_sock = FRDTSocket(address,protocol_op,const.TIMEOUT)
-        offset=0
+        rdt_sock = FRDTSocket(address, protocol_op, const.TIMEOUT)
+        offset = 0
         if rdt_segment.opcode == const.OP_START_UPLOAD:
+            rdt_sock.set_role(Role.Receiver)
             offset = struct.calcsize("!BQ")
         else:
+            rdt_sock.set_role(Role.Sender)
             offset = 1
-        file_name = rdt_segment.payload[offset:].decode()        
+        file_name = rdt_segment.payload[offset:].decode()
         file_path = os.path.join(drive_dir, file_name)
-        
+
         if rdt_segment.opcode == const.OP_START_DOWNLOAD:
             if not os.path.exists(file_path):
-                logger.error(f"No existe el archivo {file_name} en el servidor!")
-                rdt_sock.accept_connection(const.OP_ERROR,b"FILE_NOT_FOUND")
+                logger.error(f"{file_name} no existe en el servidor!")
+                rdt_sock.accept_connection(const.OP_ERROR, b"FILE_NOT_FOUND")
                 return
-            size= os.path.getsize(file_path)
-            rdt_sock.accept_connection(const.OP_ACK,struct.pack("!Q",size))
-            download_to(rdt_sock,file_path)
-            
+            size = os.path.getsize(file_path)
+            rdt_sock.accept_connection(const.OP_ACK, struct.pack("!Q", size))
+            download_to(rdt_sock, file_path)
+
         elif rdt_segment.opcode == const.OP_START_UPLOAD:
-            # aca el filesize lo otorga el cliente justo despues del primer byte
-            _,_,space = shutil.disk_usage(drive_dir)
-            file_size= struct.unpack("!Q",rdt_segment.payload[1:9])[0]
-            if file_size>space:
-                logger.error(f"No hay espacio suficiente en el servidor para{file_name} ")
-                rdt_sock.accept_connection(const.OP_ERROR,b"El servidor no tiene espacio disponible")
+            # aca el filesize lo otorga el cliente
+            # justo despues del primer byte
+            _, _, space = shutil.disk_usage(drive_dir)
+            file_size = struct.unpack("!Q", rdt_segment.payload[1:9])[0]
+            if file_size > space:
+                logger.error(
+                    f"No hay espacio suficiente en el servidor para{file_name}"
+                )
+                rdt_sock.accept_connection(
+                    const.OP_ERROR, b"El servidor no tiene espacio disponible"
+                )
                 return
-            rdt_sock.accept_connection(const.OP_ACK,b"Iniciando carga de archivo")
-            upload_from(rdt_sock,file_path,file_size)
+            msg_upload = b"Iniciando carga de archivo"
+            rdt_sock.accept_connection(const.OP_ACK, msg_upload)
+            upload_from(rdt_sock, file_path, file_size)
         else:
             logger.error(f"Operación {rdt_segment.opcode} no soportada")
     except Exception as e:
         logger.error(f"Error con el cliente {address}: {e}")
     finally:
-        if rdt_sock: rdt_sock.close()
-    
-    
+        if rdt_sock:
+            rdt_sock.close()
 
-def upload_from(rdt_sock:FRDTSocket,file_path:str,size):
+
+def upload_from(rdt_sock: FRDTSocket, file_path: str, size):
     logger.info(f"Cargando Archivo en {file_path}")
     start_time = time.time()
     bytes_received = 0
     with open(file_path, "wb") as f:
         while bytes_received < size:
-            opcode,chunk = rdt_sock.recv()
+            opcode, chunk = rdt_sock.recv()
             if opcode == const.OP_ERROR:
-                err_msg=chunk.decode()
+                err_msg = chunk.decode()
                 logger.error(f"Error recibido: {err_msg}")
                 raise RuntimeError(f"Error remoto: {err_msg}")
-            if opcode==const.OP_END:
+            if opcode == const.OP_END:
                 logger.info(f"Fin de Transmisión {bytes_received}")
                 break
             f.write(chunk)
             bytes_received += len(chunk)
     final_time = time.time() - start_time
-    if bytes_received>=size:
+    if bytes_received >= size:
         # esto evita que el hilo muera antes que el cliente se desconecte
         rdt_sock.recv()
+        rdt_sock.close()
     else:
-        raise ConnectionError(f"Transmision incompleta: {bytes_received}/{size} bytes")
+        err_msg = f"Transmision incompleta: {bytes_received}/{size} bytes"
+        raise ConnectionError(err_msg)
     logger.info(f"Transmisión exitosa {bytes_received}")
-    show_stats(final_time,size)            
-def download_to(rdt_sock:FRDTSocket,file_path:str):
+    show_stats(final_time, size)
+
+
+def download_to(rdt_sock: FRDTSocket, file_path: str):
     logger.info(f"Descargando {file_path}")
-    #rdt_sock.recv()
-    chunk_size=1024*100 #100kb
+    # rdt_sock.recv()
+    chunk_size = 1024 * 100  # 100kb
     # abro el archivo y lo envio con send(que se encarga de segmentarlo)
     start_time = time.time()
-    bytes_sent=0
-    size=os.path.getsize(file_path)
-    with open(file_path,"rb") as file:
+    bytes_sent = 0
+    size = os.path.getsize(file_path)
+    with open(file_path, "rb") as file:
         while True:
             chunk = file.read(chunk_size)
             if not chunk:
                 break
             rdt_sock.send(chunk)
-            bytes_sent+= len(chunk)
-    if bytes_sent>=size:
-        final_time = time.time()-start_time
-        logger.info(f"Transmisión exitosa")
-        show_stats(final_time,bytes_sent)
+            bytes_sent += len(chunk)
+    if bytes_sent >= size:
+        final_time = time.time() - start_time
+        rdt_sock.close()
+        logger.info("Transmisión exitosa")
+        show_stats(final_time, bytes_sent)
     else:
-        raise ConnectionError(f"Transmision incompleta: {bytes_sent}/{len(file)} bytes")
-def _add_common_arguments(parser:argparse.ArgumentParser):
-       parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity")
-       parser.add_argument("-q", "--quiet", action="store_true", help="decrease output verbosity")
-       parser.add_argument("-H", "--host", default="10.0.0.2", help="server IP address")
-       parser.add_argument("-p", "--port", type=int, default=const.PORT, help="server port")
-       parser.add_argument("-s", "--storage", type=str, default="storage", help="storage")
+        err_msg = f"Transmision incompleta: {bytes_sent}/{len(file)} bytes"
+        raise ConnectionError(err_msg)
+
+
+def _add_common_arguments(parser: argparse.ArgumentParser):
+    v_help = "increase output verbosity"
+    parser.add_argument("-v", "--verbose", action="store_true", help=v_help)
+
+    parser.add_argument(
+        "-q", "--quiet", action="store_true", help="decrease output verbosity"
+    )
+    host_help = "server IP address"
+    parser.add_argument("-H", "--host", default="10.0.0.2", help=host_help)
+    parser.add_argument(
+        "-p", "--port", type=int, default=const.PORT, help="server port"
+    )
+    dir = "storage"
+    parser.add_argument("-s", "--storage", type=str, default=dir, help=dir)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Servidor FRDT")
     _add_common_arguments(parser)
     args = parser.parse_args()
-    configure_logger(verbose=args.verbose,quiet=args.quiet)
+    configure_logger(verbose=args.verbose, quiet=args.quiet)
 
-    os.umask(0) # para ver al archivo cargandose en vscode (esto evita que se bloquee)
+    os.umask(0)  # para ver al archivo cargandose (evita que se bloquee)
     drive_dir = args.storage
     if not os.path.exists(drive_dir):
         os.makedirs(drive_dir)
-    # Socket Maestro: El unico socket que hace bind al puerto 65535, y no es confiable
+    # Socket Maestro: El unico socket que hace bind al puerto 65535,
+    # y no es confiable
     welcome_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sv_ip = args.host
     welcome_socket.bind((sv_ip, sv_port))
-    logger.info(f"Servidor iniciado!")
+    logger.info("Servidor iniciado!")
     logger.info(f"Esperando conexiones en el puerto {sv_port}")
     while True:
         raw_data, addr = welcome_socket.recvfrom(buff_size)
@@ -143,18 +174,18 @@ if __name__ == "__main__":
         try:
             segment = Segment.unpack(raw_data)
             # Si aparece un nuevo request de conexión
-            if segment.opcode in [const.OP_START_UPLOAD, const.OP_START_DOWNLOAD]:                
-                #creo un nuevo hilo para el cliente
+            req_op_codes = [const.OP_START_UPLOAD, const.OP_START_DOWNLOAD]
+            if segment.opcode in req_op_codes:
+                # creo un nuevo hilo para el cliente
                 t = threading.Thread(
-                    target=welcome_client, 
-                    args=(addr, segment, drive_dir)
+                    target=welcome_client, args=(addr, segment, drive_dir)
                 )
-                t.daemon = True # Para cerrar el sv aunque haya hilos
+                t.daemon = True  # Para cerrar el sv aunque haya hilos
                 t.start()
             else:
-                logger.debug(f"Paquete ignorado {addr} con opcode {segment.opcode}")
+                opcode = segment.opcode
+                logger.debug(f"Paquete ignorado {addr} con opcode {opcode}")
                 print("Threads activos:", len(threading.enumerate()))
 
         except Exception as e:
             logger.error(f"Error procesando paquete en el server master: {e}")
-            
