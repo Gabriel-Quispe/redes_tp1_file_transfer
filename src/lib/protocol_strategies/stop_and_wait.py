@@ -14,7 +14,7 @@ class StopAndWait(ProtocolStrategy):
     
     # Por lo general max retry siempre es None, solo se usa en el cierre de la conexión
     # para evitar el problema de los ejercitos
-    def send_data(self, segment:Segment, max_retry:Optional[int]=10)-> Optional[Segment]:
+    def send_data(self, segment:Segment, max_retry:Optional[int]=50)-> Optional[Segment]:
         retries = 0
         while retries<max_retry:
             #acá fuerzo que se use este protocolo
@@ -38,7 +38,7 @@ class StopAndWait(ProtocolStrategy):
                 logger.debug(f"Retransmitiendo seq {segment.seq_num}...")
                 continue
     
-    def receive_data(self,max_retry=10) -> Tuple[int, Optional[bytes]]:
+    def receive_data(self,max_retry=50) -> Tuple[int, Optional[bytes]]:
         # acá evito que se muera el receptor(cliente y servidor puede ser receptores)
         self.socket.settimeout(const.TIMEOUT)
         retries=0

@@ -52,7 +52,7 @@ class SelectiveRepeat(ProtocolStrategy):
                 self.transmit_thread.start()
                 self.ack_thread.start()
 
-    def send_data(self, segment: Segment, max_retry: int = 10):
+    def send_data(self, segment: Segment, max_retry: int = 50):
         self.wakeup_threads()
         with self.cond:
             while self.active:

@@ -108,8 +108,10 @@ class FRDTSocket:
             return
         logger.info("[Socket] Cerrando conexión...")
         fin_segment = Segment(const.OP_END, self.p_strategy.next_seq, 1, b"")
-        # Best Effort se manda el END varias veces
-        for _ in range(3):
+        
+        # Best Effort se manda el END varias veces sin saturar la red
+        rafaga = max(5, min(self.wsize, 10))
+        for _ in range(rafaga):
             try:
                 self.socket.sendto(fin_segment.pack(), self.address)
             except Exception:

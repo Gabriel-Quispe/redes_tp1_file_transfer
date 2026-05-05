@@ -23,7 +23,7 @@ class ProtocolStrategy:
         self.closing = False
     def set_window(self,tam:int)->None:
         self.wsize=tam
-    def send_data(self, segment:Segment, max_retry:int=10)-> Optional[Segment]:
+    def send_data(self, segment:Segment, max_retry:int=50)-> Optional[Segment]:
         pass
     def receive_data(self,max_retry=10) -> Tuple[int, Optional[bytes]]:
         pass
